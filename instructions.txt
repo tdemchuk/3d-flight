@@ -1,0 +1,99 @@
+Setup Checklist:
+
+- Debug as x64
+- Using GLFW and GLAD
+	- https://www.glfw.org/download.html
+	- https://glad.dav1d.de/
+- Go into Project Preferences -> VC++ Directories and add:
+	- GL Dependencies -> lib folder to Library Directories
+	- GL Dependencies -> include folder to Include Directories
+- Go into Project Preferences -> Linker -> Input
+	- Add "glfw3.lib" to Additional Dependencies
+	- Add "opengl32.lib" to Additional Dependencies (this lib comes with the Microsoft SDK and does not need to be downloaded)
+- Add GL Dependencies -> glad.c to project source files
+
+Important Notes:
+
+- To remove the background command line window in VS on Windows:
+	- Project Preferences -> Linker -> System. Set SubSystem to WINDOWS
+	- Project Preferences -> Linker -> Advanced. Set EntryPoint to "mainCRTStartup"
+	** OR: "#pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")"
+
+Terrain Generation:
+
+- Default vertices and normals generated with this python script:
+	vx = -8     # x coord in 2D
+	vy = -8     # y coord in 2D
+
+	#  +Y           OpenGL 3D Coordinate System
+	#   |           (Right Hand Rule)
+	#   |____ +X
+	#    \
+	#     \
+	#     +Z
+
+	for y in range(0, 17):
+		for x in range(0, 17):
+	    		# print coordinates followed by normals
+			print(str(vx) + ".0f, 0.0f, ", end='')
+			if (vy >= 0):
+		    		print(' ', end='')
+			print(str(vy) + ".0f, ", end='')
+			print("0.0f, 1.0f, 0.0f,", end='\t')    # normal points straight up
+			vx += 1
+		print()     # newline
+		vx = -8
+		vy += 1
+- Triangle vertex indices (with CCW winding) gen erated with this python script:
+	width = 16   # square grid dimensions, width == height
+
+	# cell vertices (relative)
+	#   b --- d
+	#   |  \  |
+	#   c --- a
+
+	for y in range(0, width):           # iterate cells in grid
+    		for x in range(0, width):
+        		base = y * (width+1) + x    	# base index
+                    					# compute cell vertex indices as pictured above
+        		c = base
+        		a = c + 1
+        		b = c + width + 1
+        		d = a + width + 1
+        
+        		# print triangle 1 and 2 vertex indices w/ counterclockwise winding
+        		print(str(a) + ", " + str(b) + ", " + str(c) + ", ", end='')
+        		print(str(a) + ", " + str(d) + ", " + str(b) + ", ")
+
+Tips for efficiency:
+	- Preallocate whenever possible
+	- code with locality of reference, cache coherence in mind
+	- precompute whenever possible
+	- break large or repetitive computations into simpler parts
+
+Notes for potential improvements:
+	- camera class
+	- dynamically generate variable sized terrain chunks
+	- compute noise/ heightmap in vertex shader and apply to vertex
+	- compute face normals in geometry shader
+	- tile terrain chunks in "player" range (range = view distance)
+	- generate terrain in spiral from player - https://www.desmos.com/calculator/w9fetmljyf, must modify projection matrix far plane
+	- upload modelview projection matrix as uniform -> no need to create with each run of vertex shader
+
+Quaternions:
+	- q = r + ai + bj + ck
+	- q = quaternion
+	- r = real component (single value) between -1 and 1. When > 0 point is within hemisphere, when < -1 point is outside
+
+
+
+
+
+
+
+
+
+
+
+
+
