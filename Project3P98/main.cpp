@@ -75,9 +75,7 @@ GLFWwindow* createWindow() {
 int main(int argc, char* argv[]) {		
 
 	// perform setup
-	int ret = glfwInit();									// init GLFW and set options
-	if (ret == GLFW_TRUE) printf("GLFW INIT SUCCESS\n");
-	if (ret == GLFW_FALSE) printf("GLFW INIT FAILURE\n");
+	glfwInit();									// init GLFW and set options
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -95,6 +93,8 @@ int main(int argc, char* argv[]) {
 	// init terrain
 	//tc.applyRandomHeightmap();
 	tc.applySinusoidalHeightmap();
+	//tc.computeFaceNormals();						// mathematically "correct" method is broken atm, use approximation 
+	//tc.computeAngleWeightedSmoothNormals();
 	tc.computeSmoothNormalsApproximation();
 
 	// init test cube

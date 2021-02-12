@@ -14,7 +14,9 @@
 // represents a single chunk of terrain in a procedurally generated world
 class TerrainChunk {
 private:
-	const unsigned int width;				// square grid so height = width
+	// Private vars
+	const float scale;						// scale of terrain
+	const unsigned int width;				// width of cells grid. square grid so height = width
 	const unsigned int v_width;				// width of vertices grid
 	const unsigned int vertices_stride;
 	const unsigned int num_vertices;		// buffer size information
@@ -22,10 +24,16 @@ private:
 	const unsigned int num_faces;
 	const unsigned int num_face_elements;
 	const unsigned int num_indices;
+	const unsigned int vertices_size;		// size of vertices and indices arrays in bytes - TODO: MAKE PRIVATE AGAIN
+	const unsigned int indices_size;
 	const float ylvl;						// y level of initial horizontal plane
 
-	float* face_normals = nullptr;
-	float* face_areas = nullptr;
+	float*	vertices		= nullptr;
+	int*	indices			= nullptr;
+	float*	face_normals	= nullptr;
+	float*	face_areas		= nullptr;
+
+	unsigned int VAO, VBO, EBO;				// OpenGL buffer object ID's for this instantiation - make private when buffer creation is moved here
 
 	// compute vertex array index of x, z coordinate
 	inline int indexOf(int x, int z) {
@@ -34,13 +42,8 @@ private:
 
 public:
 	// glob vars
-	float* vertices = nullptr;
-	int* indices = nullptr;
-	const unsigned int vertices_size;		// size of vertices and indices arrays in bytes - TODO: MAKE PRIVATE AGAIN
-	const unsigned int indices_size;
 	glm::mat4 model = glm::mat4(1.0f);							// model matrix for this object
 	glm::vec3 color = glm::vec3(0.105f, 0.713f, 0.227f);		// base color for this object - grass green
-	unsigned int VAO, VBO, EBO;				// OpenGL buffer object ID's for this instantiation - make private when buffer creation is moved here
 
 	/*
 		Constructor
@@ -48,7 +51,8 @@ public:
 		gridsize should be an even number and is defaulted to 16.
 		initialYLevel is defaulted to 0.0
 	 */
-	TerrainChunk(unsigned int gridsize = 16, float initialYLevel = 0) :
+	TerrainChunk(unsigned int gridsize = 16, float cellscale = 1.0f, float initialYLevel = 0.0f) :
+		scale(cellscale),
 		width(gridsize),
 		v_width(width + 1),
 		vertices_stride(6),
@@ -76,20 +80,21 @@ public:
 				  \
 				  +Z
 		*/
-		float vx0 = 0 - (width / 2.0f);		// vertex coords on horizontal XZ plane
+		float vx0 = 0 - (scale * width / 2.0f);	// vertex coords on horizontal XZ plane
 		float vx = vx0, vz = vx0;
 		unsigned int index = 0;
-		for (int y = 0; y < v_width; y++) {
-			for (int x = 0; x < v_width; x++) {
-				vertices[index++] = vx++;		// set vertex XYZ vector components
+		for (float y = 0; y < v_width; y++) {
+			for (float x = 0; x < v_width; x++) {
+				vertices[index++] = vx;			// set vertex XYZ vector components
 				vertices[index++] = ylvl;
 				vertices[index++] = vz;
-				vertices[index++] = 0.0f;	// set default normal vector for vertex
+				vertices[index++] = 0.0f;		// set default normal vector for vertex
 				vertices[index++] = 1.0f;
 				vertices[index++] = 0.0f;
+				vx += scale;
 			}
 			vx = vx0;
-			vz++;
+			vz += scale;
 		}
 
 		/*
@@ -101,10 +106,10 @@ public:
 		*/
 		index = 0;
 		int a, b, c, d;
-		for (int y = 0; y < width; y++) {		// iterate cells
-			for (int x = 0; x < width; x++) {
+		for (unsigned int y = 0; y < width; y++) {		// iterate cells
+			for (unsigned int x = 0; x < width; x++) {
 				// compute vertex indices
-				c = y * v_width + x;		// base vertex index
+				c = y * v_width + x;			// base vertex index
 				a = c + 1;
 				b = c + v_width;
 				d = a + v_width;
@@ -146,9 +151,9 @@ public:
 	// augments each vertices height (y component) by an amount given by a sinusoidal function
 	void applySinusoidalHeightmap() {
 		int index = 1;
-		for (int y = 0; y < v_width; y++) {
-			for (int x = 0; x < v_width; x++) {
-				vertices[index] += cos(0.7 * (double)x);
+		for (unsigned int y = 0; y < v_width; y++) {
+			for (unsigned int x = 0; x < v_width; x++) {
+				vertices[index] += (float)cos(0.7 * (double)x);
 				index += vertices_stride;
 			}
 		}
@@ -156,13 +161,14 @@ public:
 
 	// augments each vertices height (y component) by a random amount
 	void applyRandomHeightmap() {
-		srand(time(0));								// seed rng and randomly modify terrain
-		for (int i = 1; i < num_elements; i += vertices_stride) {
+		srand((unsigned int)time(0));								// seed rng and randomly modify terrain
+		for (unsigned int i = 1; i < num_elements; i += vertices_stride) {
 			vertices[i] = ((float)(rand() % 101) - 50) / 130.0f;
 		}
 	}
 
 	// compute smoothed vertex normals from surrounding polygon face normals weighted by face angle and surface area
+	// BROKEN - DONT USE
 	// https://www.bytehazard.com/articles/vertnorm.html
 	// smoothed normal = normalize(sum(theta_i * triangle_surface_area_i * triangle_face_normal_i))
 	// theta is the angle between the bounding vectors that form each triangle incident with V
@@ -185,15 +191,16 @@ public:
 		glm::vec3 norm;
 		glm::vec3 V, A, B, VA, VB;
 		glm::vec3 v1, v2, v3, v4, v5, v6;
-		for (z = 0; z < v_width; z++) {			// iterate vertices
-			for (x = 0; x < v_width; x++) {
+		for (z = 0; z < (signed int)v_width; z++) {			// iterate vertices
+			for (x = 0; x < (signed int)v_width; x++) {
 				v_index = indexOf(x, z-1);		// get adjacent and central vertices
 				v6 = glm::vec3(vertices[v_index], vertices[v_index + 1], vertices[v_index + 2]);
 				v_index += vertices_stride;
 				v5 = glm::vec3(vertices[v_index], vertices[v_index + 1], vertices[v_index + 2]);
 				v_index += vertices_stride * v_width;
 				v4 = glm::vec3(vertices[v_index], vertices[v_index + 1], vertices[v_index + 2]);
-				V_index = v_index -= vertices_stride;
+				v_index -= vertices_stride;
+				V_index = v_index;
 				V = glm::vec3(vertices[v_index], vertices[v_index + 1], vertices[v_index + 2]);
 				v_index -= vertices_stride;
 				v1 = glm::vec3(vertices[v_index], vertices[v_index + 1], vertices[v_index + 2]);
@@ -218,14 +225,14 @@ public:
 
 				// compute smoothed normal
 				fn_index = 3 * flo_index;		// normal array has 3 components per normal
-				norm += acos(glm::dot(v1, v6)) * face_areas[flo_index++] * glm::vec3(face_normals[fn_index++], face_normals[fn_index++], face_normals[fn_index++]);
-				norm += acos(glm::dot(v6, v5)) * face_areas[flo_index++] * glm::vec3(face_normals[fn_index++], face_normals[fn_index++], face_normals[fn_index++]);
-				norm += acos(glm::dot(v5, v4)) * face_areas[flo_index++] * glm::vec3(face_normals[fn_index++], face_normals[fn_index++], face_normals[fn_index++]);
+				norm += acos(glm::dot(v1, v6)) * face_areas[flo_index++] * glm::normalize(glm::vec3(face_normals[fn_index++], face_normals[fn_index++], face_normals[fn_index++]));
+				norm += acos(glm::dot(v6, v5)) * face_areas[flo_index++] * glm::normalize(glm::vec3(face_normals[fn_index++], face_normals[fn_index++], face_normals[fn_index++]));
+				norm += acos(glm::dot(v5, v4)) * face_areas[flo_index++] * glm::normalize(glm::vec3(face_normals[fn_index++], face_normals[fn_index++], face_normals[fn_index++]));
 
 				fn_index = 3 * fhi_index;
-				norm += acos(glm::dot(v1, v6)) * face_areas[fhi_index++] * glm::vec3(face_normals[fn_index++], face_normals[fn_index++], face_normals[fn_index++]);
-				norm += acos(glm::dot(v1, v6)) * face_areas[fhi_index++] * glm::vec3(face_normals[fn_index++], face_normals[fn_index++], face_normals[fn_index++]);
-				norm += acos(glm::dot(v1, v6)) * face_areas[fhi_index++] * glm::vec3(face_normals[fn_index++], face_normals[fn_index++], face_normals[fn_index++]);
+				norm += acos(glm::dot(v1, v6)) * face_areas[fhi_index++] * glm::normalize(glm::vec3(face_normals[fn_index++], face_normals[fn_index++], face_normals[fn_index++]));
+				norm += acos(glm::dot(v1, v6)) * face_areas[fhi_index++] * glm::normalize(glm::vec3(face_normals[fn_index++], face_normals[fn_index++], face_normals[fn_index++]));
+				norm += acos(glm::dot(v1, v6)) * face_areas[fhi_index++] * glm::normalize(glm::vec3(face_normals[fn_index++], face_normals[fn_index++], face_normals[fn_index++]));
 				
 				norm = glm::normalize(norm);
 
@@ -240,16 +247,21 @@ public:
 	// uses surrounding vertex heights to efficiently compute vertex normal approximations
 	void computeSmoothNormalsApproximation() {	// compute smoothed normals from surrounding vertex heights
 		int x, z;								// from 'compute_normal' - https://github.com/itoral/gl-terrain-demo/blob/master/src/ter-terrain.cpp#L129
-		int index;
+		int index, j;
 		float l, r, u, d;
 		glm::vec3 norm;
-		for (z = 1; z < width; z++) {			// for each inner vertex in terrain mesh (excluding border vertices), compute height of surrounding terrain and adjust normal
-			for (x = 1; x < width; x++) {
+		for (z = 0; z < (signed int)v_width; z++) {			// for each inner vertex in terrain mesh (excluding border vertices), compute height of surrounding terrain and adjust normal
+			for (x = 0; x < (signed int)v_width; x++) {
 				index = indexOf(x, z);
-				l = vertices[index - 5];		// y comp of left vertex
-				r = vertices[index + 7];		// y comp of right vertex
-				d = vertices[index + (vertices_stride * (width + 1)) + 1];
-				u = vertices[index - (vertices_stride * (width + 1)) + 1];
+				j = index - 5;
+				l = (j > -1 && j < (signed int)v_width ? vertices[j] : 0.0f);
+				j = index + 7;
+				r = (j > -1 && j < (signed int)v_width ? vertices[j] : 0.0f);
+				j = index + (vertices_stride * v_width) + 1;
+				d = (j > -1 && j < (signed int)v_width ? vertices[j] : 0.0f);
+				j = index - (vertices_stride * v_width) + 1;
+				u = (j > -1 && j < (signed int)v_width ? vertices[j] : 0.0f);
+
 				norm = glm::normalize(glm::vec3(l - r, 2.0f, d - u));
 				vertices[index + 3] = norm.x;
 				vertices[index + 4] = norm.y;
@@ -259,6 +271,7 @@ public:
 	}
 
 	// iterates faces and updates normals
+	// BROKEN
 	void computeFaceNormals() {
 		/*
 			triangle indices (with CCW winding)
@@ -271,8 +284,8 @@ public:
 		int zShift = width + 1;					// # indices that represent an ip/down shift on the z axis
 		int a, b, c, d;
 		glm::vec3 A, B, C, D, AB, AC, AD, norm;
-		for (int z = 0; z < width; z++) {		// iterate cells
-			for (int x = 0; x < width; x++) {
+		for (unsigned int z = 0; z < width; z++) {		// iterate cells
+			for (unsigned int x = 0; x < width; x++) {
 				// compute vertex indices
 				c = indexOf(x, z);				// base index in vertices array
 				a = c + vertices_stride;
