@@ -26,13 +26,16 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="terrain.h">
-      <Filter>Source Files</Filter>
-    </ClInclude>
     <ClInclude Include="testcamera.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="shader.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="chunk.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="world.h">
       <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -41,6 +44,9 @@
       <Filter>Source Files\shaders</Filter>
     </None>
     <None Include="shaders\basic.vs">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\chunkshader.vs">
       <Filter>Source Files\shaders</Filter>
     </None>
   </ItemGroup>

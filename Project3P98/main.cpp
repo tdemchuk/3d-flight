@@ -14,7 +14,7 @@
 
 #include "shader.h"			// shader loading library - https://learnopengl.com/code_viewer_gh.php?code=includes/learnopengl/shader.h
 #include "testcamera.h"		// test camera - MUST BE REPLACED W/ CUSTOM FLIGHTSIM CAM USING QUATERNIONS
-#include "terrain.h"
+#include "chunk.h"
 #include <glm/glm.hpp>		// GLM - https://glm.g-truc.net/0.9.9/index.html
 #include <glm/gtc/matrix_transform.hpp>
 #include <glad/glad.h>		// For GLAD - ensure to include before GLFW
@@ -33,15 +33,14 @@ void randomizeTerrain();
 
 
 // glob vars
-#define DEFAULT_WIDTH 500
-#define DEFAULT_HEIGHT 500
+#define DEFAULT_WIDTH 1000
+#define DEFAULT_HEIGHT 1000
 unsigned int width, height;
 
 float deltatime = 0;
 float lastframe = 0;
 
 TestCamera cam(glm::vec3(0, 5, 17));
-TerrainChunk tc(64);
 //Terrain t;
 
 // initializes GLAD and loads OpenGL function pointers
@@ -89,13 +88,19 @@ int main(int argc, char* argv[]) {
 
 	// init shader
 	Shader shader("shaders/basic.vs", "shaders/basic.fs");
+	Shader chunkshader("shaders/chunkshader.vs","shaders/basic.fs");
 
 	// init terrain
+	Chunk chunk1, chunk2(1, 1);
+	Chunk chunk3(1, -1);
+	Chunk chunk4(-1, 0);
+	//TerrainChunk tc(64);			// make sure to init AFTER GLFW
 	//tc.applyRandomHeightmap();
-	tc.applySinusoidalHeightmap();
+	//tc.applySinusoidalHeightmap();
 	//tc.computeFaceNormals();						// mathematically "correct" method is broken atm, use approximation 
 	//tc.computeAngleWeightedSmoothNormals();
-	tc.computeSmoothNormalsApproximation();
+	//tc.computeSmoothNormalsApproximation();
+	//tc.uploadVertexData();							// call whenever vertex data is changed
 
 	// init test cube
 	glm::mat4 cube_model = glm::mat4(1.0f);
@@ -143,35 +148,6 @@ int main(int argc, char* argv[]) {
 	-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
 	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
 	};
-
-	// init terrain VAO's, VBO's, EBO's
-	glGenVertexArrays(1, &tc.VAO);
-	glGenBuffers(1, &tc.VBO);
-	glGenBuffers(1, &tc.EBO);
-
-	glBindVertexArray(tc.VAO);				// first bind VAO, then we must bind and set vertex buffers, then configure vertex attributes
-	glBindBuffer(GL_ARRAY_BUFFER, tc.VBO);
-	glBufferData(GL_ARRAY_BUFFER, tc.vertices_size, tc.vertices, GL_STATIC_DRAW);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, tc.EBO);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, tc.indices_size, tc.indices, GL_STATIC_DRAW);
-
-	/*
-		Vertex Attrib Pointers
-		- Enable vertex attrib array by passing in it's unique index to glEnableVertexAttribArray
-		- create vertex attrib pointers with:
-			glVertexAttribPointer(uint index, int size, GLenum type, bool normalized, int stride, const void* ptr)
-			- index = unique index of vertex attribute to be modified
-			- size	= # components per vertex attributute (ie. dimensionality of vertex data, can be 1,2,3, or 4)
-			- type	= data type of each vector components, usually GL_FLOAT but can also be GL_DOUBLE, GL_INT, GL_BYTE, etc...
-			- normalized = whether fixed-point data values should be normalized (GL_TRUE) or converted directly as fixed point vals when accessed
-			- stride = The byte offset between consecutive generic vertex attributes. If stride is 0, the vertex attributes are interpreted as tightly packed
-			- pointer = offset of the first component of the first vertex attribute in the array in the data store of the buffer currently bound to GL_ARRAY_BUFFER, initially 0.
-	*/
-	glEnableVertexAttribArray(0);			// position attribute
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);			// normal attribute
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-	glBindBuffer(GL_ARRAY_BUFFER, 0);		// unbind (legal but not necessary)
 	
 	// init cube VAO's, VBO's, EBO's
 	unsigned int cubeVBO, cubeVAO;
@@ -192,7 +168,7 @@ int main(int argc, char* argv[]) {
 	glm::mat4 view = glm::mat4(1.0f);
 	glm::vec3 viewpos(0, 5, 17);					// inverse of view matrix translation
 	view = glm::translate(glm::rotate(view, glm::radians(10.0f), glm::vec3(1.0, 0, 0)), glm::vec3(0, -5, -17));		// translate the scene in the reverse direction of the way we want to move
-	glm::mat4 proj = glm::perspective(glm::radians(cam.Zoom), (float)width/(float)height, 0.1f, 100.0f);
+	glm::mat4 proj = glm::perspective(glm::radians(cam.Zoom), (float)width/(float)height, 0.1f, 1000.0f);
 	glm::mat3 norm;									// normal matrix - https://www.lighthouse3d.com/tutorials/glsl-12-tutorial/the-normal-matrix/
 	shader.use();
 	shader.setMat4("proj", proj);
@@ -201,6 +177,11 @@ int main(int argc, char* argv[]) {
 	glm::vec3 lightpos(0.0f, 2.0f, 0.0f);		// 2 units above the origin
 	shader.setVec3("lightcolor", 1.0f, 1.0f, 1.0f);
 	shader.setVec3("lightpos", lightpos);
+
+	chunkshader.use();
+	chunkshader.setVec3("objcolor", 0.105f, 0.713f, 0.227f);
+	chunkshader.setVec3("lightcolor", 1.0f, 1.0f, 1.0f);
+	chunkshader.setVec3("lightpos", lightpos);
 
 	// render loop
 	while (!glfwWindowShouldClose(window)) {	
@@ -214,18 +195,20 @@ int main(int argc, char* argv[]) {
 		glClearColor(0.443f, 0.560f, 0.756f, 1.0f);	// RGBA
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		shader.use();		// use main shader
+		// use chunk shader and draw terrain chunk
+		chunkshader.use();
+		chunkshader.setMat4("projectionViewMatrix", proj * cam.GetViewMatrix());
+		chunkshader.setVec3("viewpos", cam.Position);
+		chunk1.draw();
+		chunk2.draw();
+		chunk3.draw();
+		chunk4.draw();
+
+		shader.use();		// use basic shader
 		view = cam.GetViewMatrix();
 		viewpos = cam.Position;
 		shader.setMat4("view", view);
 		shader.setVec3("viewpos", viewpos);
-
-		glBindVertexArray(tc.VAO);		// draw terrain
-		norm = glm::mat3(glm::transpose(glm::inverse(tc.model)));
-		shader.setMat3("normalMatrix", norm);
-		shader.setMat4("model", tc.model);
-		shader.setVec3("objcolor", tc.color.x, tc.color.y, tc.color.z);
-		glDrawElements(GL_TRIANGLES, tc.indices_size, GL_UNSIGNED_INT, 0);
 
 		glBindVertexArray(cubeVAO);		// draw cube
 		norm = glm::mat3(glm::transpose(glm::inverse(cube_model)));
@@ -239,9 +222,6 @@ int main(int argc, char* argv[]) {
 	}
 
 	// perform cleanup and exit
-	glDeleteVertexArrays(1, &tc.VAO);
-	glDeleteBuffers(1, &tc.VBO);
-	glDeleteBuffers(1, &tc.EBO);
 	glDeleteVertexArrays(1, &cubeVAO);
 	glDeleteBuffers(1, &cubeVBO);
 	glfwTerminate();

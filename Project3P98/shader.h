@@ -18,11 +18,6 @@
 */
 class Shader {
 private:
-    // hashmap of all created shaders
-    static std::unordered_map<std::string, std::pair<unsigned int, unsigned int>> shaderList;          // maps filename combination to shader program ID, # references pair
-
-    // concatenated shader source filenames
-    const std::string shaderSrcNames;
 
     // check compilation status of shader fopr errors
     static void checkShaderCompileStatus(unsigned int shader, const std::string& type) {
@@ -57,14 +52,8 @@ public:
 
     // constructor
     Shader(const char* vertexPath, const char* fragmentPath, const char* geometryPath = nullptr) :
-        shaderSrcNames(std::string(vertexPath) + std::string(fragmentPath) + (geometryPath != nullptr ? geometryPath : "")),
-        ID(shaderList.find(shaderSrcNames) == shaderList.end() ? glCreateProgram() : shaderList[shaderSrcNames].first)
+        ID(glCreateProgram())
     {
-        // check if this shader combination already exists as a program
-        if (shaderList.find(shaderSrcNames) == shaderList.end()) {      // desired shader program doesn't already exists
-            shaderList[shaderSrcNames] = std::pair<unsigned int, unsigned int>(ID, 1);    // cache program ID, numref pair in hashmap
-        }
-        else shaderList[shaderSrcNames] = std::pair<unsigned int, unsigned int>(ID, shaderList[shaderSrcNames].second + 1);
 
         // retrieve the vertex/fragment source code from filePath
         std::string vertexCode;
@@ -149,11 +138,7 @@ public:
     }
 
     ~Shader() {			// destructor - perform cleanup
-        // if number of references to shader program will drop to zero, delete shader and remove entry from cache
-        if (shaderList[shaderSrcNames].second == 1) {
-            shaderList.erase(shaderSrcNames);
-            glDeleteProgram(ID);
-        }
+        glDeleteProgram(ID);
     }
 
     // activate the shader

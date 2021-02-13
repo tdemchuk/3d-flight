@@ -18,9 +18,11 @@ void main() {
 	
 	vec3 ambient = ambientStrength * lightcolor;
 	
-	vec3 lightdir = normalize(lightpos - fragpos);
+	vec3 lightdir = lightpos - fragpos;
+	float distcomponent = 20.0 / length(lightdir);
+	lightdir = normalize(lightdir);
 	float diff = max(dot(norm, lightdir), 0.0);
-	vec3 diffuse = diff * lightcolor;
+	vec3 diffuse = diff * lightcolor * distcomponent;
 
 	vec3 viewdir = normalize(viewpos - fragpos);
 	vec3 reflectdir = reflect(-lightdir, norm);
