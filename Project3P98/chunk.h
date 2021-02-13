@@ -65,16 +65,19 @@ private:
 			}
 		}
 	}
-	inline float height(int x, int z) {							// return height of specified vertex or 0 if out of bounds
-		if (x < 0 || x > DIM || z < 0 || z > DIM) return 0.0f;	
+	inline float computeHeight(float x, float z) {				// compute and return height at specified XZ plane coordinate in world space
+		return (float)(cos(0.7 * (double)x));
+	}
+	inline float height(int x, int z, float wx, float wz) {		// return height of specified vertex - must compute out of bounds coordinates
+		if (x < 0 || x > DIM || z < 0 || z > DIM) return computeHeight(wx, wz);	
 		return mesh[STRIDE * (z * VDIM + x) + 1];				// return y component of vertex
 	}
-	inline glm::vec3 computeNormal(int x, int z) {				// return height-approximated normal vector for provided vertex
+	inline glm::vec3 computeNormal(int x, int z, float wx, float wz) {				// return height-approximated normal vector for provided vertex
 		float l, r, d, u;
-		l = height(x - 1, z);
-		r = height(x + 1, z);
-		u = height(x, z - 1);
-		d = height(x, z + 1);
+		l = height(x - 1, z, wx, wz);
+		r = height(x + 1, z, wx, wz);
+		u = height(x, z - 1, wx, wz);
+		d = height(x, z + 1, wx, wz);
 		return glm::normalize(glm::vec3(l - r, 2.0f, d - u));
 	}
 
@@ -100,7 +103,7 @@ public:
 		if (chunk_index == nullptr) initIndexArray();
 		chunk_indexref++;
 
-		// transform chunk coord to world coords - points to centre of 
+		// transform chunk coord to world coords - points to centre of chunk
 		float worldx = CHUNK_WIDTH * chunkcoordx;
 		float worldz = CHUNK_WIDTH * chunkcoordz;
 
@@ -113,7 +116,7 @@ public:
 			for (int x = 0; x < VDIM; x++) {
 				// store vertex positions
 				mesh[index++] = vx;
-				mesh[index++] = (float)cos(0.7 * (double)x * SCALE); //0.0;		// compute vertex height via noise or other method here
+				mesh[index++] = computeHeight(vx, vz);		// compute vertex height via noise or other method here
 				mesh[index++] = vz;
 				index += 3;
 				vx += SCALE;
@@ -122,12 +125,15 @@ public:
 			vz += SCALE;
 		}
 
-		index = 3;
+		index = 0;
 		glm::vec3 norm;
 		for (int y = 0; y < VDIM; y++) {
 			for (int x = 0; x < VDIM; x++) {
 				// store vertex normals
-				norm = computeNormal(x, y);
+				vx = mesh[index];
+				index += 2;
+				vz = mesh[index++];
+				norm = computeNormal(x, y, vx, vz);
 				mesh[index++] = norm.x;
 				mesh[index++] = norm.y;
 				mesh[index++] = norm.z;
@@ -148,8 +154,10 @@ public:
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, STRIDE * sizeof(float), (void*)(3 * sizeof(float)));
 
 		// can cleanup mesh data at this point 
-		// vertex data may be needed again however
+		// vertex data may be needed again however - could use seperately stored vertex data without normals and tex coords
+		printf("before del\n");
 		delete[] mesh;
+		printf("after del\n");
 	}
 
 	// Destructor - cleanup
