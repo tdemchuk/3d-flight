@@ -38,6 +38,9 @@
     <ClInclude Include="world.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="cache.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\basic.fs">
@@ -47,6 +50,9 @@
       <Filter>Source Files\shaders</Filter>
     </None>
     <None Include="shaders\chunkshader.vs">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\chunkshader.fs">
       <Filter>Source Files\shaders</Filter>
     </None>
   </ItemGroup>

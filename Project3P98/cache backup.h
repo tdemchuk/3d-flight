@@ -7,7 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/noise.hpp>
 #include <iostream>
-#include <thread>
+#include <thread>			// for multithreading
 
 // class data		
 glm::vec3	chunk_color		= glm::vec3(0.105f, 0.713f, 0.227f);
@@ -71,15 +71,6 @@ private:
 			}
 		}
 	}
-	void setup() {																		// perform initial chunk data setup
-		mesh = new float[meshElements()];
-		initIndexArray();
-		glGenBuffers(1, &ebo);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexElements() * sizeof(int), chunk_index, GL_STATIC_DRAW);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		delete[] chunk_index;								// no longer need index array in memory
-	}
 	inline float computeHeight(float x, float z) {										// compute and return height at specified XZ plane coordinate in world space
 		constexpr float MAX_AMPLITUDE = 18.3f;											// https://www.redblobgames.com/maps/terrain-from-noise/
 		constexpr float FREQUENCY = 0.003f;
@@ -92,16 +83,15 @@ private:
 		return MAX_AMPLITUDE * elevation - MAX_AMPLITUDE;
 		//return (float)(cos(0.7 * (double)x)); - test sinusoidal heightmap
 	}
-	void generateMeshData(unsigned int startz, unsigned int endz, float worldx, float worldz) {
+	void generateMeshData(unsigned int start, unsigned int end, float worldx, float worldz) {	// computes mesh position data. start and end should be multiple of STRIDE, goes from start until end (not inclusive)
 		// generate mesh data
-		float vz = worldz + (SCALE * startz);
-		float vx = worldx;
+		float vx0 = worldx - boundaryOffset();	// initial vertex coords in world space
+		float vz = worldz - boundaryOffset();
+		float vx = vx0;
 		float vy = 0;
-		unsigned int index = VDIM * startz;
-		unsigned int vindex = 3 * index;
-		index *= STRIDE;
-		for (unsigned int y = startz; y < endz; y++) {
-			for (unsigned int x = 0; x < VDIM; x++) {
+		unsigned int index = start, vindex = 3 * index / STRIDE;
+		for (int y = 0; y < VDIM; y++) {
+			for (int x = 0; x < VDIM; x++) {
 				// store vertex positions
 				vy = computeHeight(vx, vz);		// compute vertex height via noise or other method here
 				mesh[index++] = vx;
@@ -112,8 +102,9 @@ private:
 				vertex[vindex++] = vz;
 				index += 3;
 				vx += SCALE;
+				if (index >= end) return;
 			}
-			vx = worldx;
+			vx = vx0;
 			vz += SCALE;
 		}
 	}
@@ -134,27 +125,9 @@ private:
 	float* vertex;					// vertex positions
 	unsigned int vao, vbo;			// GL vertex array, buffer object ID's
 
-	// give cache private access
-	friend class Cache;		
-
 public:
 
-	// dummy constructor
-	Chunk(bool isDummy) {
-		if (true) {
-			vertex = new float[vertexElements()];
-			vao = 0;
-			vbo = 0;
-			if (chunk_refnum == 0) setup();
-			chunk_refnum++;
-		}
-		else {
-			printf("MUST INIT AS DUMMY OBJECT.\n");
-			exit(0);
-		}
-	}
-
-	// Constructor
+	// Constructor - no default constructor
 	Chunk(int chunkcoordx = 0, int chunkcoordz = 0) {
 
 		// allocate
@@ -162,28 +135,29 @@ public:
 		glGenVertexArrays(1, &vao);
 		glGenBuffers(1, &vbo);
 
+		static int num = 0;
+
 		// handle index generation if first chunk
-		if (chunk_refnum == 0) setup();
+		if (chunk_index == nullptr) {
+			mesh = new float[meshElements()];
+			initIndexArray();
+			glGenBuffers(1, &ebo);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexElements() * sizeof(int), chunk_index, GL_STATIC_DRAW);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			delete[] chunk_index;								// no longer need index array in memory
+		}
 		chunk_refnum++;
 
 		// transform chunk coord to world coords - points to centre of chunk
-		float worldx = (float)(int)(CHUNK_WIDTH * chunkcoordx);
-		float worldz = (float)(int)(CHUNK_WIDTH * chunkcoordz);
-		worldx -= boundaryOffset();								// transform coords to point to lower leftmost vertex of chunk
-		worldz -= boundaryOffset();
+		float worldx = (int)(CHUNK_WIDTH * chunkcoordx);
+		float worldz = (int)(CHUNK_WIDTH * chunkcoordz);
 
-		// generate mesh data in parallel - 3 threads - TODO: move to thread pool eventually to improve performance
-		static constexpr int NUMTHREADS = 3;
-		static constexpr int ZSPLIT1 = VDIM / NUMTHREADS;
-		static constexpr int ZSPLIT2 = ZSPLIT1 + ZSPLIT1;
-		//static constexpr int ZSPLIT3 = ZSPLIT2 + ZSPLIT2;
-		std::thread t1(&Chunk::generateMeshData, this, 0, ZSPLIT1, worldx, worldz);
-		std::thread t2(&Chunk::generateMeshData, this, ZSPLIT1, ZSPLIT2, worldx, worldz);
-		//std::thread t3(&Chunk::generateMeshData, this, ZSPLIT2, ZSPLIT3, worldx, worldz);
-		generateMeshData(ZSPLIT2, VDIM, worldx, worldz);
-		t1.join();
-		t2.join();
-		//t3.join();
+		int numthreads = 2;										// 2 processing threads (main and thread t)
+		int splitPoint = STRIDE * (int)(numVertices() / 2);		// compute mesh index that represents the division in work between the threads - integer division rounds down
+		std::thread t(&Chunk::generateMeshData, this, splitPoint, meshElements(), worldx, worldz);
+		generateMeshData(0, splitPoint, worldx, worldz);
+		t.join();												// wait until thread done
 
 		unsigned int index = 0;
 		float vx, vz;
@@ -211,6 +185,8 @@ public:
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, STRIDE * sizeof(float), (void*)0);
 		glEnableVertexAttribArray(1);			// normal attribute
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, STRIDE * sizeof(float), (void*)(3 * sizeof(float)));
+
+		printf("Chunk generated\n");
 	}
 
 	// Destructor - cleanup
@@ -218,7 +194,6 @@ public:
 		delete[] vertex;
 		chunk_refnum--;
 		if (chunk_refnum == 0) {
-			printf("Freeing Shared Chunk Resources\n");
 			delete[] mesh;
 			glDeleteBuffers(1, &ebo);
 		}

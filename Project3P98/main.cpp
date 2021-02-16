@@ -7,14 +7,16 @@
 */
 
 /*
+	Main  - Handles GL context creation, window management, and main render loop
+
 	Basic setup taken from https://learnopengl.com/
 	Please read instructions.txt for basic setup checklist to ensure proper
 	execution of the project within Visual Studio
 */
 
+#include "world.h"
 #include "shader.h"			// shader loading library - https://learnopengl.com/code_viewer_gh.php?code=includes/learnopengl/shader.h
 #include "testcamera.h"		// test camera - MUST BE REPLACED W/ CUSTOM FLIGHTSIM CAM USING QUATERNIONS
-#include "chunk.h"
 #include <glm/glm.hpp>		// GLM - https://glm.g-truc.net/0.9.9/index.html
 #include <glm/gtc/matrix_transform.hpp>
 #include <glad/glad.h>		// For GLAD - ensure to include before GLFW
@@ -22,14 +24,13 @@
 #include <time.h>
 #include <iostream>
 
+
 // function prototypes
 							// system and event callbacks
 void terminateProgram();
 void keyboard_input(GLFWwindow* window);
 void mouse_callback(GLFWwindow* window, double x, double y);
 void window_resize_callback(GLFWwindow* window, int w, int h);
-							// helper funcs
-void randomizeTerrain();
 
 
 // glob vars
@@ -40,8 +41,8 @@ unsigned int width, height;
 float deltatime = 0;
 float lastframe = 0;
 
-TestCamera cam(glm::vec3(0, 5, 17));
-//Terrain t;
+TestCamera cam((float)width/(float)height, glm::vec3(0, 25, 17));
+
 
 // initializes GLAD and loads OpenGL function pointers
 void initGLAD() {
@@ -87,13 +88,14 @@ int main(int argc, char* argv[]) {
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
 	// init shader
-	Shader shader("shaders/basic.vs", "shaders/basic.fs");
-	Shader chunkshader("shaders/chunkshader.vs","shaders/basic.fs");
+	//Shader shader("shaders/basic.vs", "shaders/basic.fs");
+	//Shader chunkshader("shaders/chunkshader.vs","shaders/chunkshader.fs");
 
 	// init terrain
-	Chunk chunk1, chunk2(1, 1);
-	Chunk chunk3(1, -1);
-	Chunk chunk4(-1, 0);
+	//Chunk chunk1, chunk2(1, 1);
+	//Chunk chunk3(1, -1);
+	//Chunk chunk4(-1, 0);
+	//Cache cache(-1, -1);
 	//TerrainChunk tc(64);			// make sure to init AFTER GLFW
 	//tc.applyRandomHeightmap();
 	//tc.applySinusoidalHeightmap();
@@ -103,6 +105,7 @@ int main(int argc, char* argv[]) {
 	//tc.uploadVertexData();							// call whenever vertex data is changed
 
 	// init test cube
+	/*
 	glm::mat4 cube_model = glm::mat4(1.0f);
 	cube_model = glm::translate(glm::rotate(glm::scale(cube_model, glm::vec3(2, 2, 2)),glm::radians(15.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(0.0f, 2.0f, 0.0f));
 	float cube_vertices[] = {
@@ -178,10 +181,21 @@ int main(int argc, char* argv[]) {
 	shader.setVec3("lightcolor", 1.0f, 1.0f, 1.0f);
 	shader.setVec3("lightpos", lightpos);
 
+	// setup shader values
 	chunkshader.use();
-	chunkshader.setVec3("objcolor", 0.105f, 0.713f, 0.227f);
-	chunkshader.setVec3("lightcolor", 1.0f, 1.0f, 1.0f);
-	chunkshader.setVec3("lightpos", lightpos);
+	glm::vec3 sunPosition = glm::vec3(14, 2, 22);
+	const glm::vec3 origin(0.0f);
+	glm::vec3 lightdir = glm::normalize(origin - sunPosition);
+	chunkshader.setVec3("objcolor", chunk_color);					// <-- temp, unnecessary once textures are added
+	chunkshader.setVec3("dlight.direction", lightdir);
+	chunkshader.setVec3("dlight.ambient", 0.2f, 0.2f, 0.2f);
+	chunkshader.setVec3("dlight.diffuse", 0.5f, 0.5f, 0.5f);
+	chunkshader.setVec3("dlight.specular", 0.2f, 0.2f, 0.2f);
+	*/
+	
+	cam.renderDist = 1000.0f;
+	cam.redefineProjectionMatrix((float)width/(float)height);
+	World w(cam);
 
 	// render loop
 	while (!glfwWindowShouldClose(window)) {	
@@ -195,15 +209,10 @@ int main(int argc, char* argv[]) {
 		glClearColor(0.443f, 0.560f, 0.756f, 1.0f);	// RGBA
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// use chunk shader and draw terrain chunk
-		chunkshader.use();
-		chunkshader.setMat4("projectionViewMatrix", proj * cam.GetViewMatrix());
-		chunkshader.setVec3("viewpos", cam.Position);
-		chunk1.draw();
-		chunk2.draw();
-		chunk3.draw();
-		chunk4.draw();
+		// update and draw world
+		w.update(deltatime);
 
+		/*
 		shader.use();		// use basic shader
 		view = cam.GetViewMatrix();
 		viewpos = cam.Position;
@@ -216,14 +225,15 @@ int main(int argc, char* argv[]) {
 		shader.setMat4("model", cube_model);
 		shader.setVec3("objcolor", 1.0f, 1.0f, 1.0f);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
+		*/
 
 		glfwSwapBuffers(window);				
 		glfwPollEvents();
 	}
 
 	// perform cleanup and exit
-	glDeleteVertexArrays(1, &cubeVAO);
-	glDeleteBuffers(1, &cubeVBO);
+	//glDeleteVertexArrays(1, &cubeVAO);
+	//glDeleteBuffers(1, &cubeVBO);
 	glfwTerminate();
 	return 0;
 }
@@ -232,20 +242,6 @@ int main(int argc, char* argv[]) {
 void terminateProgram() {
 	glfwTerminate();
 	exit(EXIT_FAILURE);
-}
-
-// Applies a randomly generated heightmap to a terrain object and re-uploads to graphics card
-// FOR DEMO-PURPOSES ONLY
-void randomizeTerrain() {
-	//srand(time(0));								// seed rng and randomly modify terrain
-	//for (int i = 1; i < t.vertices_num_elements; i += 3) {
-	//	t.vertices[i] = ((float)(rand() % 101) - 50) / 130.0f;
-	//}
-	//Terrain::smoothNormals(&t);
-
-	//glBindVertexArray(t.VAO);
-	//glBindBuffer(GL_ARRAY_BUFFER, t.VBO);
-	//glBufferData(GL_ARRAY_BUFFER, t.vertices_size, t.vertices, GL_STATIC_DRAW);		// upload modified data
 }
 
 
@@ -260,8 +256,7 @@ void keyboard_input(GLFWwindow* window) {		// not technically a "callback", rath
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, true);
 	else if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);	// wireframe
 	else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);	// full
-												// options
-	else if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) randomizeTerrain();
+
 	// controls
 	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) cam.ProcessKeyboard(FORWARD, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) cam.ProcessKeyboard(BACKWARD, deltatime);

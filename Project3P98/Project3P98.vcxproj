@@ -145,6 +145,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cache.h" />
     <ClInclude Include="chunk.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="testcamera.h" />
@@ -153,6 +154,7 @@
   <ItemGroup>
     <None Include="shaders\basic.fs" />
     <None Include="shaders\basic.vs" />
+    <None Include="shaders\chunkshader.fs" />
     <None Include="shaders\chunkshader.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

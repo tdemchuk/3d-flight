@@ -17,7 +17,7 @@ enum Camera_Movement {
 // Default camera values
 const float YAW = -90.0f;
 const float PITCH = 0.0f;
-const float SPEED = 20.0f;
+const float SPEED = 200.0f;
 const float SENSITIVITY = 0.1f;
 const float ZOOM = 45.0f;
 
@@ -27,6 +27,14 @@ const float ZOOM = 45.0f;
 	** ROLL is not supported here
     ** probably use quaternions to avoid gimbal lock - https://gamedev.stackexchange.com/questions/103502/how-can-i-implement-a-quaternion-camera
                                                      - https://www.gamedev.net/tutorials/programming/math-and-physics/a-simple-quaternion-based-camera-r1997/
+    ** SUGGESTED CONTROLS FOR PLANE FLIGHTSIM:
+    *   ENTER - Apply thrust (Move forward)
+    *   W - Tilt down
+    *   S - Tilt up
+    *   A - Tilt Left (roll cam left and gradually change yaw)
+    *   D - Tilt right
+    
+    ** Make Camera class owner of mouse and keyboard input handling functions
 */
 class TestCamera {
 public:
@@ -43,10 +51,19 @@ public:
     float MovementSpeed;
     float MouseSensitivity;
     float Zoom;
+    // projection matrix
+    glm::mat4 proj;                 // camera projection matrix
+    float renderDist;               // render distance of this camera in world space (default 100.0)
 
     // constructor with vectors
-    TestCamera(glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
+    TestCamera(float screenAspectRatio, glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f), float yaw = YAW, float pitch = PITCH) : 
+        Front(glm::vec3(0.0f, 0.0f, -1.0f)), 
+        MovementSpeed(SPEED), 
+        MouseSensitivity(SENSITIVITY), 
+        Zoom(ZOOM), 
+        renderDist(100.0f)
     {
+        redefineProjectionMatrix(screenAspectRatio);
         Position = position;
         WorldUp = up;
         Yaw = yaw;
@@ -54,13 +71,19 @@ public:
         updateCameraVectors();
     }
     // constructor with scalar values
-    TestCamera(float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM)
+    TestCamera(float screenAspectRatio, float posX, float posY, float posZ, float upX, float upY, float upZ, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM), renderDist(100.0f)
     {
+        redefineProjectionMatrix(screenAspectRatio);
         Position = glm::vec3(posX, posY, posZ);
         WorldUp = glm::vec3(upX, upY, upZ);
         Yaw = yaw;
         Pitch = pitch;
         updateCameraVectors();
+    }
+
+    // compute projection matrix for this camera object
+    void redefineProjectionMatrix(float aspectRatio) {
+        proj = glm::perspective(glm::radians(45.0f), 1000.0f/1000.0f, 0.1f, 1000.0f);
     }
 
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
@@ -120,6 +143,7 @@ public:
     }
 
 private:
+
     // calculates the front vector from the Camera's (updated) Euler Angles
     void updateCameraVectors()
     {
