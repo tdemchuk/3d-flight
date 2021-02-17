@@ -24,13 +24,12 @@ private:
 	// class constants
 	static constexpr int	STRIDE		= 6;							// stride for mesh data - # components per vertex [3 position, 3 normal, 3 tex (coming soon)]
 	static constexpr int	CHUNK_WIDTH = 500;							// chunk consumes a square width by width grid in world space - MAKE MULTIPLE OF 2
-	static constexpr float  SCALE		= 2.0f;							// width of one cell in world space - SHOULD DIVIDE CHUNK_WIDTH EVENLY
+	static constexpr float  SCALE		= 4.0f;							// width of one cell in world space - SHOULD DIVIDE CHUNK_WIDTH EVENLY
 	static constexpr float	DENSITY		= 1.0f / SCALE;					// determines poly density in terrain chunk mesh - inversely proportional to cell scale (> 1 = smaller cells = more polys in mesh)
 	static constexpr int	DIM			= (int)(DENSITY * CHUNK_WIDTH);	// dimension of terrain grid in # quads
 	static constexpr int	VDIM		= DIM + 1;						// dimension of terrain grid in # vertices (celldim + 1)
-	static float*			mesh;										// vertex, normal, and texture data for terrain chunk
+	//static float*			mesh;										// vertex, normal, and texture data for terrain chunk
 	static int*				chunk_index;								// index array for all chunk objects
-	static int				chunk_refnum;								// number of instantiated chunk object using shared resources (index, mesh array, ebo)
 	static unsigned int		ebo;
 
 
@@ -71,14 +70,37 @@ private:
 			}
 		}
 	}
-	void setup() {																		// perform initial chunk data setup
-		mesh = new float[meshElements()];
+	static void computeSharedResources() {												// generate and link shared chunk data
+		//mesh = new float[meshElements()];
 		initIndexArray();
 		glGenBuffers(1, &ebo);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexElements() * sizeof(int), chunk_index, GL_STATIC_DRAW);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-		delete[] chunk_index;								// no longer need index array in memory
+		delete[] chunk_index;			// no longer need index array in memory
+	}
+	static void freeSharedResources() {													// cleanup shared chunk data
+		glDeleteBuffers(1, &ebo);
+	}
+	// prepare object for rendering with opengl
+	// only call this on thread associated with opengl context
+	void glLoad() {
+		// setup GL buffers
+		glGenVertexArrays(1, &vao);
+		glGenBuffers(1, &vbo);
+
+		glBindVertexArray(vao);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBufferData(GL_ARRAY_BUFFER, meshElements() * sizeof(float), mesh, GL_STATIC_DRAW);		// upload mesh data to graphics card
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);													// bind EBO that was already uploaded to GPU
+
+		glEnableVertexAttribArray(0);			// position attribute
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, STRIDE * sizeof(float), (void*)0);
+		glEnableVertexAttribArray(1);			// normal attribute
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, STRIDE * sizeof(float), (void*)(3 * sizeof(float)));
+
+		// mesh data unnecessary after GPU upload
+		delete[] mesh;
 	}
 	inline float computeHeight(float x, float z) {										// compute and return height at specified XZ plane coordinate in world space
 		constexpr float MAX_AMPLITUDE = 18.3f;											// https://www.redblobgames.com/maps/terrain-from-noise/
@@ -132,6 +154,7 @@ private:
 
 	// instance data
 	float* vertex;					// vertex positions
+	float* mesh;					// vertex, normal, and texture data for terrain chunk to be uploaded to GPU
 	unsigned int vao, vbo;			// GL vertex array, buffer object ID's
 
 	// give cache private access
@@ -142,11 +165,10 @@ public:
 	// dummy constructor
 	Chunk(bool isDummy) {
 		if (true) {
+			mesh = new float[meshElements()];
 			vertex = new float[vertexElements()];
 			vao = 0;
 			vbo = 0;
-			if (chunk_refnum == 0) setup();
-			chunk_refnum++;
 		}
 		else {
 			printf("MUST INIT AS DUMMY OBJECT.\n");
@@ -158,13 +180,8 @@ public:
 	Chunk(int chunkcoordx = 0, int chunkcoordz = 0) {
 
 		// allocate
-		vertex = new float[vertexElements()];		
-		glGenVertexArrays(1, &vao);
-		glGenBuffers(1, &vbo);
-
-		// handle index generation if first chunk
-		if (chunk_refnum == 0) setup();
-		chunk_refnum++;
+		mesh = new float[meshElements()];
+		vertex = new float[vertexElements()];
 
 		// transform chunk coord to world coords - points to centre of chunk
 		float worldx = (float)(int)(CHUNK_WIDTH * chunkcoordx);
@@ -201,27 +218,13 @@ public:
 			}
 		}
 
-		// setup GL buffers
-		glBindVertexArray(vao);
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBufferData(GL_ARRAY_BUFFER, meshElements() * sizeof(float), mesh, GL_STATIC_DRAW);		// upload mesh data to graphics card
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);													// bind EBO that was already uploaded to GPU
-
-		glEnableVertexAttribArray(0);			// position attribute
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, STRIDE * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(1);			// normal attribute
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, STRIDE * sizeof(float), (void*)(3 * sizeof(float)));
+		
 	}
 
 	// Destructor - cleanup
 	~Chunk() {
+		delete[] mesh;
 		delete[] vertex;
-		chunk_refnum--;
-		if (chunk_refnum == 0) {
-			printf("Freeing Shared Chunk Resources\n");
-			delete[] mesh;
-			glDeleteBuffers(1, &ebo);
-		}
 		glDeleteVertexArrays(1, &vao);
 		glDeleteBuffers(1, &vbo);
 	}
@@ -232,24 +235,23 @@ public:
 		swap(first.vao, second.vao);
 		swap(first.vbo, second.vbo);
 		swap(first.vertex, second.vertex);
+		swap(first.mesh, second.mesh);
 	}
 
 	// Copy constructor
-	Chunk(const Chunk& other) : vertex(new float[vertexElements()]), vao(other.vao), vbo(other.vbo) {
-		chunk_refnum++;
+	Chunk(const Chunk& other) : vertex(new float[vertexElements()]), mesh(new float[meshElements()]), vao(other.vao), vbo(other.vbo) {
 		std::copy(other.vertex, other.vertex + vertexElements(), vertex);
+		std::copy(other.mesh, other.mesh + meshElements(), mesh);
 	}
 
 	// Copy assign
 	Chunk& operator=(Chunk other) {
-		chunk_refnum++;
 		swap(*this, other);
 		return *this;
 	}
 
 	// Move constructor
-	Chunk(Chunk&& other) noexcept : vao(0), vbo(0), vertex() {
-		chunk_refnum++;
+	Chunk(Chunk&& other) noexcept : vao(0), vbo(0), vertex(), mesh() {
 		swap(*this, other);
 	}
 
@@ -268,8 +270,8 @@ public:
 
 // Initialize static values
 int* Chunk::chunk_index = nullptr;
-float* Chunk::mesh = nullptr;
-int Chunk::chunk_refnum = 0;
+//float* Chunk::mesh = nullptr;
+//int Chunk::chunk_refnum = 0;
 unsigned int Chunk::ebo = 0;
 
 #endif

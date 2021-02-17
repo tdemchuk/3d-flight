@@ -72,7 +72,7 @@ public:
 	{
 		// setup shader values
 		chunkshader.use();
-		sunPosition = glm::vec3(14, 2, 22);
+		sunPosition = glm::vec3(14, 20, 22);
 		glm::vec3 lightdir = glm::normalize(origin - sunPosition);
 		chunkshader.setVec3("objcolor", chunk_color);					// <-- temp, unnecessary once textures are added
 		chunkshader.setVec3("dlight.direction", lightdir);
@@ -97,7 +97,7 @@ public:
 		// draw chunks within render distance in a spiral originating at the active chunk
 		// this ensures the central chunk will be loaded first (at least on startup)
 		spit.reset();
-		cache.pollLoadRequests();
+		cache.pollInitRequests();
 		for (int i = 0; i < RENDER_VOLUME; i++) {
 			cache.draw(spit.getx() + activeChunk.x, spit.getz() + activeChunk.y);
 			spit.next();

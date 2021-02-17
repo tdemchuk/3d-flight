@@ -45,15 +45,20 @@ private:
 
 	// Load request queue wrapper
 	struct ChunkLoadRequest {
-		CachedChunk* chunk;								// Cached chunk to load into
+		CachedChunk* chunk = nullptr;					// Cached chunk to load into
 		int chunkx;										// chunk coordinate to load
 		int chunkz;
+	};
+
+	// GL Init request wrapper
+	struct GLInitRequest {
+		CachedChunk* chunk = nullptr;					// cached chunk to glLoad
 	};
 
 	// class constants
 	static constexpr int DIM = 10;						// cache matrix dimension
 	static constexpr int CACHE_VOL = DIM * DIM;			// cache volume - maximum total chunks cached at any time
-	static constexpr int POLL_DELAY_MILLIS = 200;
+	static constexpr int POLL_DELAY_MILLIS = 100;
 	const std::chrono::milliseconds POLL_DELAY;
 
 	// class helper functions
@@ -70,21 +75,43 @@ private:
 		for (int col = 0; col < DIM; col++) cache[index(col, z)].status = CACHESTATUS::INVALID;
 	}
 
+	// chunk loading routine
+	void pollLoadRequests() {
+		while (polling) {
+			static ChunkLoadRequest clr;
+			static GLInitRequest glir;
+			if (loadQueue.empty()) std::this_thread::sleep_for(POLL_DELAY);	// poll after delay for efficiency - maybe use condition variable instead of poll delay to avoid busy waiting?
+			else {
+				clr = loadQueue.front();
+				loadQueue.pop();
+				printf("generating chunk [%d, %d]\n", clr.chunkx, clr.chunkz);
+				clr.chunk->chunk = Chunk(clr.chunkx, clr.chunkz);					// load requested chunk
+				glir.chunk = clr.chunk;
+				initQueue.push(glir);												// create gl init request
+			}
+			
+		}
+	}
+
 	// instance data
 	int refx, refz;										// chunk coordinates for reference chunk - lower, leftmost chunk stored in cache grid
 	int domx, domz;										// initial array coordinate for cache domain boundaries (intersection corr. with array location of reference chunk)
 	std::vector<CachedChunk> cache;						// cache matrix
 	std::queue<ChunkLoadRequest> loadQueue;				// queue of chunks to be loaded
-	//bool polling;										// flag that signals if load queue should be continuously polled
-	//std::thread load_t;
+	std::queue<GLInitRequest> initQueue;				// queue of chunks to be initialized for opengl usage
+	bool polling;										// flag that signals if load queue should be continuously polled
+	std::thread load_t;									// chunk loading thread
 
 public:
 
 	// Constructor
 	// Defines a matrix of loaded chunks beginning at reference chunk coordinate (referencex, referencez)
 	Cache(int referencex = 0, int referencez = 0) :
-		POLL_DELAY(POLL_DELAY_MILLIS), refx(referencex), refz(referencez), domx(0), domz(0)//, polling(true)
+		POLL_DELAY(POLL_DELAY_MILLIS), refx(referencex), refz(referencez), domx(0), domz(0), polling(true)
 	{
+		// compute shared resources for chunk objects
+		Chunk::computeSharedResources();
+
 		// allocate cache matrix
 		cache.reserve(CACHE_VOL);
 		for (int y = 0; y < DIM; y++) {
@@ -95,13 +122,16 @@ public:
 		}
 
 		// init cache load thread
-		//load_t = std::thread(&Cache::pollLoadRequests, this);
+		load_t = std::thread(&Cache::pollLoadRequests, this);
 	}
 
 	// Destructor - clean up cache load thread
 	~Cache() {
-		//polling = false;
-		//load_t.join();
+		polling = false;
+		load_t.join();
+
+		// free shared chunk resources
+		Chunk::freeSharedResources();
 	}
 
 	// delete copy constructor, copy assignment operator, and move constructor
@@ -112,19 +142,15 @@ public:
 	// cache dimension
 	static constexpr int dim() { return DIM; }
 
-	// chunk loading routine
-	void pollLoadRequests() {
-		//while (polling) {
-		static ChunkLoadRequest clr;
-		if (!loadQueue.empty()) {
-			clr = loadQueue.front();
-			loadQueue.pop();
-			printf("generating chunk [%d, %d]\n", clr.chunkx, clr.chunkz);
-			clr.chunk->chunk = Chunk(clr.chunkx, clr.chunkz);				// load requested chunk
-			clr.chunk->status = CACHESTATUS::VALID;							// mark valid for drawing
+	// chunk initialization roution - call this once per render loop from gl context thread
+	void pollInitRequests() {
+		static GLInitRequest ginit;
+		if (!initQueue.empty()) {
+			ginit = initQueue.front();
+			initQueue.pop();
+			ginit.chunk->chunk.glLoad();
+			ginit.chunk->status = CACHESTATUS::VALID;
 		}
-		//std::this_thread::sleep_for(POLL_DELAY);	// poll after delay for efficiency - maybe use condition variable instead of poll delay to avoid busy waiting?
-		//}
 	}
 
 	// draw chunk at specified chunk coordinate
@@ -163,9 +189,8 @@ public:
 			refz++;
 			invalidateRow(wrap(domz - 1));
 		}
-		int index_x = (rel_index_x + domx) % DIM;
-		int index_z = (rel_index_z + domz) % DIM;
-		//printf("drawing chunk [%d, %d] at array [%d, %d]\n", chunkx, chunkz, index_x, index_z);
+		int index_x = wrap((rel_index_x + domx));
+		int index_z = wrap((rel_index_z + domz));
 		CachedChunk& cc = cache[index(index_x, index_z)];
 		//printf("status = %d\n", cc.status);
 		if (cc.status == CACHESTATUS::VALID) {						// draw valid cached chunk
@@ -173,6 +198,7 @@ public:
 			cc.chunk.draw();
 		}
 		else if (cc.status == CACHESTATUS::INVALID) {				// request this chunk to be loaded into cache, then fail the draw gracefully
+			printf("requesting load chunk [%d, %d] at array [%d, %d]\n", chunkx, chunkz, index_x, index_z);
 			cc.status = CACHESTATUS::QUEUED;						// this way the chunk will be drawn when it is ready without causing massive lag and frame drops
 			ChunkLoadRequest clr;
 			clr.chunk = &cc;
