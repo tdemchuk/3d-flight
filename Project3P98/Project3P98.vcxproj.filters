@@ -16,6 +16,9 @@
     <Filter Include="Source Files\shaders">
       <UniqueIdentifier>{389eef04-0b84-427b-82d2-161c4a13e926}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\textures">
+      <UniqueIdentifier>{516af7f9-fac5-4c3f-b908-670fbd85722f}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -41,6 +44,9 @@
     <ClInclude Include="cache.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="stb_image.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\basic.fs">
@@ -55,5 +61,10 @@
     <None Include="shaders\chunkshader.fs">
       <Filter>Source Files\shaders</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="textures\grass_1080_seamless.jpg">
+      <Filter>Resource Files\textures</Filter>
+    </Image>
   </ItemGroup>
 </Project>

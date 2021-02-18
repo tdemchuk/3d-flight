@@ -72,9 +72,8 @@ public:
 	{
 		// setup shader values
 		chunkshader.use();
-		sunPosition = glm::vec3(14, 20, 22);
+		sunPosition = glm::vec3(14, 60, 22);
 		glm::vec3 lightdir = glm::normalize(origin - sunPosition);
-		chunkshader.setVec3("objcolor", chunk_color);					// <-- temp, unnecessary once textures are added
 		chunkshader.setVec3("dlight.direction", lightdir);
 		chunkshader.setVec3("dlight.ambient", 0.2f, 0.2f, 0.2f);
 		chunkshader.setVec3("dlight.diffuse", 0.5f, 0.5f, 0.5f);
@@ -93,6 +92,7 @@ public:
 		chunkshader.use();
 		chunkshader.setVec3("viewpos", cam.Position);
 		chunkshader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
+		glBindTexture(GL_TEXTURE_2D, Chunk::texID());
 
 		// draw chunks within render distance in a spiral originating at the active chunk
 		// this ensures the central chunk will be loaded first (at least on startup)

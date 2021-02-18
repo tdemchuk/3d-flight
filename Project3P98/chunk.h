@@ -1,20 +1,24 @@
 #ifndef CS3P98_TERRAIN_CHUNK_H
 #define CS3P98_TERRAIN_CHUNK_H
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 #include "shader.h"
 #include <glad/glad.h>		// OpenGL function pointers
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/noise.hpp>
 #include <iostream>
+#include <cmath>
 #include <thread>
 
 // class data		
-glm::vec3	chunk_color		= glm::vec3(0.105f, 0.713f, 0.227f);
+//glm::vec3 chunk_color = glm::vec3(0.105f, 0.713f, 0.227f);
 
 /*
 	Simplified Terrain Chunk Class
 	One terrain chunk represents a square grid of terrain oriented along the horizontal XZ plane in world space
+	Using grass texture - http://texturelib.com/texture/?path=/Textures/grass/grass/grass_grass_0124
 	@author Tennyson Demchuk | 6190532 | td16qg@brocku.ca
 	@date 02.13.2021
 */
@@ -22,16 +26,18 @@ class Chunk {
 private:
 
 	// class constants
-	static constexpr int	STRIDE		= 6;							// stride for mesh data - # components per vertex [3 position, 3 normal, 3 tex (coming soon)]
-	static constexpr int	CHUNK_WIDTH = 1000;							// chunk consumes a square width by width grid in world space - MAKE MULTIPLE OF 2 - Default 1000
-	static constexpr float  SCALE		= 10.0f;						// width of one cell in world space - SHOULD DIVIDE CHUNK_WIDTH EVENLY [LARGER = BETTER PERFORMANCE, WORSE DETAIL]
+	static constexpr int	STRIDE		= 8;							// stride for mesh data - # components per vertex [3 position, 3 normal, 2 tex]
+	static constexpr int	CHUNK_WIDTH = 2000;							// chunk consumes a square width by width grid in world space - MAKE MULTIPLE OF 2 - Default 1000
+	static constexpr float  SCALE		= 16.0f;						// width of one cell in world space - SHOULD DIVIDE CHUNK_WIDTH EVENLY [LARGER = BETTER PERFORMANCE, WORSE DETAIL]
 	static constexpr float	DENSITY		= 1.0f / SCALE;					// determines poly density in terrain chunk mesh - inversely proportional to cell scale (> 1 = smaller cells = more polys in mesh)
 	static constexpr int	DIM			= (int)(DENSITY * CHUNK_WIDTH);	// dimension of terrain grid in # quads
 	static constexpr int	VDIM		= DIM + 1;						// dimension of terrain grid in # vertices (celldim + 1)
-	static constexpr float	MAX_AMPLITUDE = 24.3f;						// maximum height or depth of terrain
-	static constexpr float	FREQUENCY = 0.001f;							// terrain variance scaling factor
+	static constexpr float	TEX_SCALE	= 10.0f;						// width of texture used in world space	- SHOULD DIVIDE CHUNK_WIDTH EVENLY	
+	static constexpr float	MAX_AMPLITUDE = 64.3f;						// maximum height or depth of terrain
+	static constexpr float	FREQUENCY = 0.0005f;						// terrain variance scaling factor
 	static int*				chunk_index;								// index array for all chunk objects
 	static unsigned int		ebo;
+	static unsigned int		tex;
 
 
 	// compile time helper functions
@@ -41,6 +47,7 @@ private:
 	static constexpr int numTriangles() { return 2 * DIM * DIM; }
 	static constexpr int indexElements() { return 3 * numTriangles(); }
 	static constexpr float boundaryOffset() { return SCALE * DIM / 2.0f; }
+	static constexpr float texIncrement() { return TEX_SCALE / SCALE; }
 
 	// helper functions
 	static void initIndexArray() {
@@ -71,8 +78,28 @@ private:
 			}
 		}
 	}
-	static void computeSharedResources() {												// generate and link shared chunk data
-		//mesh = new float[meshElements()];
+	static void computeSharedResources() {												// generate and link shared chunk data - call from main thread
+		// load and generate grass texture
+		int texwidth, texheight, texnumchannels;
+		unsigned char* img = stbi_load("textures/grass2.jpg",&texwidth, &texheight, &texnumchannels, 0);
+		if (!img) {
+			printf("Chunk texture load failed.\n");
+			stbi_image_free(img);
+			exit(0);
+		}
+		glGenTextures(1, &tex);
+		glBindTexture(GL_TEXTURE_2D, tex);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texwidth, texheight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		stbi_image_free(img);
+
+		// compute mesh element index array
 		initIndexArray();
 		glGenBuffers(1, &ebo);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
@@ -80,7 +107,7 @@ private:
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		delete[] chunk_index;			// no longer need index array in memory
 	}
-	static void freeSharedResources() {													// cleanup shared chunk data
+	static void freeSharedResources() {													// cleanup shared chunk data - call from main thread
 		glDeleteBuffers(1, &ebo);
 	}
 	void glLoad() {																		// prepare object for rendering with opengl - only call this on thread associated with opengl context
@@ -97,6 +124,8 @@ private:
 		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, STRIDE * sizeof(float), (void*)0);
 		glEnableVertexAttribArray(1);			// normal attribute
 		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, STRIDE * sizeof(float), (void*)(3 * sizeof(float)));
+		glEnableVertexAttribArray(2);			// texture attribute
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, STRIDE * sizeof(float), (void*)(6 * sizeof(float)));
 
 		// mesh data unnecessary after GPU upload
 		delete[] mesh;
@@ -115,27 +144,35 @@ private:
 	}
 	void generateMeshData(unsigned int startz, unsigned int endz, float worldx, float worldz) {
 		// generate mesh data
-		float vz = worldz + (SCALE * startz);
-		float vx = worldx;
-		float vy = 0;
+		float px = worldx;
+		float py = 0.0f;
+		float pz = worldz + (SCALE * startz);
+		float ts = 0, tt = 0, intpart;
 		unsigned int index = VDIM * startz;
 		unsigned int vindex = 3 * index;
 		index *= STRIDE;
 		for (unsigned int y = startz; y < endz; y++) {
 			for (unsigned int x = 0; x < VDIM; x++) {
 				// store vertex positions
-				vy = computeHeight(vx, vz);		// compute vertex height via noise or other method here
-				mesh[index++] = vx;
-				mesh[index++] = vy;
-				mesh[index++] = vz;
-				vertex[vindex++] = vx;
-				vertex[vindex++] = vy;
-				vertex[vindex++] = vz;
-				index += 3;
-				vx += SCALE;
+				py = computeHeight(px, pz);		// compute vertex height via noise or other method here
+				mesh[index++] = px;
+				mesh[index++] = py;
+				mesh[index++] = pz;
+				vertex[vindex++] = px;
+				vertex[vindex++] = py;
+				vertex[vindex++] = pz;
+				index += 3;						// skip normal component for now
+				mesh[index++] = ts;
+				mesh[index++] = tt;
+				px += SCALE;
+				ts += 0.5f;
+				if (ts > 1.0f) ts = std::modf(ts, &intpart);
 			}
-			vx = worldx;
-			vz += SCALE;
+			px = worldx;
+			pz += SCALE;
+			ts = 0.0f;
+			tt += 0.5f;
+			if (tt > 1.0f) tt = std::modf(tt, &intpart);
 		}
 	}
 	inline float height(float* mesh, int x, int z, float wx, float wz) {				// return height of specified vertex - must compute out of bounds coordinates
@@ -144,7 +181,7 @@ private:
 	}
 	inline glm::vec3 computeNormal(float* mesh, int x, int z, float wx, float wz) {		// return height-approximated normal vector for provided vertex
 		float l, r, d, u;																// uses "finite difference" method - https://stackoverflow.com/questions/13983189/opengl-how-to-calculate-normals-in-a-terrain-height-grid
-		l = height(mesh, x - 1, z, wx - SCALE, wz);												// optional more accurate method: https://stackoverflow.com/questions/45477806/general-method-for-calculating-smooth-vertex-normals-with-100-smoothness
+		l = height(mesh, x - 1, z, wx - SCALE, wz);										// optional more accurate method: https://stackoverflow.com/questions/45477806/general-method-for-calculating-smooth-vertex-normals-with-100-smoothness
 		r = height(mesh, x + 1, z, wx + SCALE, wz);
 		u = height(mesh, x, z - 1, wx, wz - SCALE);
 		d = height(mesh, x, z + 1, wx, wz + SCALE);
@@ -207,12 +244,13 @@ public:
 			for (int x = 0; x < VDIM; x++) {
 				// store vertex normals
 				vx = mesh[index];
-				index += 2;
+				index += 2;										// skip y component
 				vz = mesh[index++];
 				norm = computeNormal(mesh, x, y, vx, vz);
 				mesh[index++] = norm.x;
 				mesh[index++] = norm.y;
 				mesh[index++] = norm.z;
+				index += 2;										// skip texture coords
 			}
 		}
 
@@ -258,6 +296,10 @@ public:
 		return CHUNK_WIDTH;
 	}
 
+	static unsigned int texID() {
+		return tex;
+	}
+
 	// draws this terrain chunk to the screen
 	// ensure to setup terrain shader beforehand
 	void draw() {
@@ -269,5 +311,6 @@ public:
 // Initialize static values
 int* Chunk::chunk_index = nullptr;
 unsigned int Chunk::ebo = 0;
+unsigned int Chunk::tex = 0;
 
 #endif

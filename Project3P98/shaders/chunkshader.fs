@@ -5,6 +5,7 @@ out vec4 fragcolor;
 
 in vec3 normal;
 in vec3 fragpos;
+in vec2 texcoord;
 
 struct DLight {
 	vec3 direction;		// directional light direction vector. keep w component 0.0f if vec4
@@ -14,7 +15,7 @@ struct DLight {
 };
 
 uniform vec3 viewpos;
-uniform vec3 objcolor;
+uniform sampler2D tex;
 uniform DLight dlight;	// directional light (ie. the sun)
 
 void main() {
@@ -36,6 +37,9 @@ void main() {
 	//vec3 specular = dlight.specular * spec;
 	
 	// compute combined result
-	vec3 result = (ambient + diffuse) * objcolor;
+	vec3 result = (ambient + diffuse);
+	if (fragpos.y < -60) result = result * vec3(0.1f, 0.3f, 0.8f);
+	else if (fragpos.y < 5) {result = result * texture(tex, texcoord).rgb;}
+	else {result = result * vec3(0.5f, 0.5f, 0.5f);}
 	fragcolor = vec4(result, 1.0);
 }
