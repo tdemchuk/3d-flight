@@ -13,6 +13,9 @@
 	Chunk Cache Structure
 	@author Tennyson Demchuk
 	@date 02.13.2021
+
+	Cache should be used only to draw contiguous(?) rectangular areas of chunks.
+
 	Handles chunk loading and generation.
 	Drawing of terrain chunks should be done through a cache object so that the cache remains up to date.
 
@@ -21,14 +24,7 @@
 	
 	When a chunk is requested to be drawn via the cache, the cache first checks to see if that chunk is cached.
 	If so, the cached chunk is accessed and drawn. If not, the cache domain lines are shifted approriately and
-	the corresponding row or column of old chunk data is reloaded with updated chunks. 
-	
-	During a reload, only one chunk should be loaded in the offending row/column at a time, starting with the chunk that
-	is central to the players direction. This requires knowledge of the players position and velocity direction. We can 
-	snap to the chunk nearest (in angle) to the velocity direction as the first chunk. Chunks should then be loaded in 
-	an oscillating pattern of left to right in distance from the players velocity direction.
-
-	TODO - make each Chunk load on a separate thread - use thread pool? - gl calls must be made by single thread (or setup shared dual gl context)
+	the corresponding row or column of old chunk data is reloaded with updated chunks.
 */
 class Cache {
 private:
@@ -38,9 +34,9 @@ private:
 
 	// Cached chunk wrapper
 	struct CachedChunk {
-		volatile CACHESTATUS status = CACHESTATUS::INVALID;
+		CACHESTATUS status = CACHESTATUS::INVALID;
 		Chunk chunk;
-		CachedChunk() : chunk(true) {}
+		CachedChunk() : chunk(true) {}					// initialize as dummy chunk without computed mesh data
 	};
 
 	// Load request queue wrapper
@@ -56,9 +52,10 @@ private:
 	};
 
 	// class constants
-	static constexpr int DIM = 10;						// cache matrix dimension
-	static constexpr int CACHE_VOL = DIM * DIM;			// cache volume - maximum total chunks cached at any time
-	static constexpr int POLL_DELAY_MILLIS = 100;
+	static constexpr int DIM = 30;						// cache matrix dimension [recommended >= 10] - SHOULD BE LARGE ENOUGH TO FIT WORLD RENDER WIDTH
+	static constexpr int CACHE_VOLUME = DIM * DIM;		// cache volume - maximum total chunks cached at any time
+	static constexpr bool CACHE_PRELOAD = true;			// preload all chunks in cache on initialization on main thread - !WARNING! COMPUTATIONALLY AND SPACE INTENSIVE
+	static constexpr int POLL_DELAY_MILLIS = 200;		// millisecond delay between load request polling while empty
 	const std::chrono::milliseconds POLL_DELAY;
 
 	// class helper functions
@@ -95,10 +92,10 @@ private:
 
 	// instance data
 	int refx, refz;										// chunk coordinates for reference chunk - lower, leftmost chunk stored in cache grid
-	int domx, domz;										// initial array coordinate for cache domain boundaries (intersection corr. with array location of reference chunk)
+	int domx, domz;										// domain boundary indices (intersection corr. with array location of reference chunk)
 	std::vector<CachedChunk> cache;						// cache matrix
-	std::queue<ChunkLoadRequest> loadQueue;				// queue of chunks to be loaded
-	std::queue<GLInitRequest> initQueue;				// queue of chunks to be initialized for opengl usage
+	std::queue<ChunkLoadRequest> loadQueue;				// queue of chunks to be loaded - polled by loading thread
+	std::queue<GLInitRequest> initQueue;				// queue of chunks to be initialized for opengl usage - polled by main thread
 	bool polling;										// flag that signals if load queue should be continuously polled
 	std::thread load_t;									// chunk loading thread
 
@@ -113,12 +110,34 @@ public:
 		Chunk::computeSharedResources();
 
 		// allocate cache matrix
-		cache.reserve(CACHE_VOL);
+		cache.reserve(CACHE_VOLUME);
 		for (int y = 0; y < DIM; y++) {
 			for (int x = 0; x < DIM; x++) {
 				CachedChunk cc;
 				cache.push_back(cc);
 			}
+		}
+
+		// preload entire cache if enabled - COMPUTATIONALLY EXPENSIVE and SPACE INTENSIVE
+		// this is done on the main thread and will block until completed
+		if (CACHE_PRELOAD) {
+			printf("Preloading cache of volume %d ... ", CACHE_VOLUME);
+			double time = glfwGetTime();
+			int cx = refx, cz = refz;
+			int i;
+			for (int y = 0; y < DIM; y++) {
+				for (int x = 0; x < DIM; x++) {
+					i = index(x,y);
+					cache[i].chunk = Chunk(cx, cz);
+					cache[i].chunk.glLoad();
+					cache[i].status = CACHESTATUS::VALID;
+					cx++;
+				}
+				cx = refx;
+				cz++;
+			}
+			time = glfwGetTime() - time;
+			printf("done - %fs.\n", time);
 		}
 
 		// init cache load thread
@@ -142,7 +161,7 @@ public:
 	// cache dimension
 	static constexpr int dim() { return DIM; }
 
-	// chunk initialization roution - call this once per render loop from gl context thread
+	// chunk initialization routine - call this once per render loop from gl context thread
 	void pollInitRequests() {
 		static GLInitRequest ginit;
 		if (!initQueue.empty()) {
@@ -156,49 +175,42 @@ public:
 	// draw chunk at specified chunk coordinate
 	// Appropriate shader must be setup prior to calling this method
 	void draw(int chunkx, int chunkz) {
-		int distx = chunkx - refx;
+		int distx = chunkx - refx;					// compute distance from reference point in chunk space
 		int distz = chunkz - refz;
 		if (distx < -1 || distx > DIM || distz < -1 || distz > DIM) {
 			printf("INVALID CHUNK COORDINATE [%d, %d] PROVIDED. CACHE COORDINATE MUST NOT EXCEED 1 PAST THE EXISTING CACHE BOUNDARIES.\n", chunkx, chunkz);
 			exit(EXIT_FAILURE);
 		}
 
-		int rel_index_x = distx - domx;			// compute index in cache array relative to reference point corrected by cache index boundaries
-		int rel_index_z = distz - domz;
-		if (rel_index_x < 0) {						// west cache miss
-			printf("West cache miss.\n");
-			domx = wrap(domx - 1);			// shift horizontal domain boundary line
-			refx--;							// shift reference coordinate accordingly
-			invalidateColumn(domx);
+		int index_x = wrap(domx + distx);			// compute corresponding cache matrix index as distance from domain boundaries
+		int index_z = wrap(domz + distz);
+
+		if (distx < 0) {						// west cache miss
+			domx = wrap(domx - 1);		// shift horizontal domain boundary line
+			refx--;						// shift reference coordinate accordingly
+			invalidateColumn(domx);		// invalidate old chunk data
 		}
-		else if (rel_index_x >= DIM) {				// east cache miss
-			printf("East cache miss.\n");
+		else if (distx >= DIM) {				// east cache miss
 			domx = wrap(domx + 1);
 			refx++;
 			invalidateColumn(wrap(domx - 1));
 		}
-		if (rel_index_z < 0) {						// south cache miss
-			printf("South cache miss.\n");
+		if (distz < 0) {						// south cache miss
 			domz = wrap(domz - 1);
 			refz--;
 			invalidateRow(domz);
 		}
-		else if (rel_index_z >= DIM) {				// north cache miss
-			printf("North cache miss.\n");
+		else if (distz >= DIM) {				// north cache miss
 			domz = wrap(domz + 1);
 			refz++;
 			invalidateRow(wrap(domz - 1));
 		}
-		int index_x = wrap((rel_index_x + domx));
-		int index_z = wrap((rel_index_z + domz));
 		CachedChunk& cc = cache[index(index_x, index_z)];
-		//printf("status = %d\n", cc.status);
 		if (cc.status == CACHESTATUS::VALID) {						// draw valid cached chunk
-			//printf("drawing chunk [%d, %d]\n", chunkx, chunkz);
 			cc.chunk.draw();
 		}
 		else if (cc.status == CACHESTATUS::INVALID) {				// request this chunk to be loaded into cache, then fail the draw gracefully
-			printf("requesting load chunk [%d, %d] at array [%d, %d]\n", chunkx, chunkz, index_x, index_z);
+			//printf("requesting load chunk [%d, %d] at array [%d, %d]\n", chunkx, chunkz, index_x, index_z);
 			cc.status = CACHESTATUS::QUEUED;						// this way the chunk will be drawn when it is ready without causing massive lag and frame drops
 			ChunkLoadRequest clr;
 			clr.chunk = &cc;
