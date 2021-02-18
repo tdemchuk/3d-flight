@@ -18,7 +18,7 @@
 class World {
 private:
 
-	// helper class for generating iterative coordinates in a spiral - taken from https://stackoverflow.com/a/14010215
+	// helper class for generating coordinates in a spiral iteratively - taken from https://stackoverflow.com/a/14010215
 	class SpiralIterator {
 	private:
 		int x, z;
@@ -39,10 +39,10 @@ private:
 	};
 
 	// class constants
-	static constexpr int	RENDER_DIST = 1;											// radial render distance in # chunks (beyond the central chunk). ie. render dist 1 will render the central (active) chunk and 1 beyond it in every direction for 9 chunks total
-	static constexpr int	RENDER_WIDTH = 2 * RENDER_DIST + 1;							// width of render area in # chunks
+	static constexpr int	RENDER_RADIUS = 5;											// radial render distance in # chunks (beyond the central chunk). ie. render dist 1 will render the central (active) chunk and 1 beyond it in every direction for 9 chunks total
+	static constexpr int	RENDER_WIDTH = 2 * RENDER_RADIUS + 1;						// width of render area in # chunks - render width is always an odd number
 	static constexpr int	RENDER_VOLUME = RENDER_WIDTH * RENDER_WIDTH;				// # chunks to be rendered each pass
-	static constexpr float	WORLD_RENDER_DIST = (float)(Chunk::width() * RENDER_DIST);	// maximum render distance in world space
+	static constexpr float	WORLD_RENDER_DIST = (float)(Chunk::width() * RENDER_RADIUS);// maximum render distance in world space - using this will guarantee pop-in
 	const glm::vec3 origin;
 
 	// helper functions
