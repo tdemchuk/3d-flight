@@ -17,7 +17,7 @@ enum Camera_Movement {
 // Default camera values
 const float YAW = -90.0f;
 const float PITCH = 0.0f;
-const float SPEED = 200.0f;
+const float SPEED = 200.0f;                     // commercial jet speeds are around 150-250 m/s
 const float SENSITIVITY = 0.1f;
 const float ZOOM = 45.0f;
 
@@ -83,7 +83,7 @@ public:
 
     // compute projection matrix for this camera object
     void redefineProjectionMatrix(float aspectRatio) {
-        proj = glm::perspective(glm::radians(45.0f), 1000.0f/1000.0f, 0.1f, 1000.0f);
+        proj = glm::perspective(glm::radians(45.0f), 1000.0f/1000.0f, 0.1f, 4700.0f);           // horizon on earth is approximately 4.7km (4700 m) away
     }
 
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix
