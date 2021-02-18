@@ -54,7 +54,7 @@ private:
 	// class constants
 	static constexpr int DIM = 30;						// cache matrix dimension [recommended >= 10] - SHOULD BE LARGE ENOUGH TO FIT WORLD RENDER WIDTH
 	static constexpr int CACHE_VOLUME = DIM * DIM;		// cache volume - maximum total chunks cached at any time
-	static constexpr bool CACHE_PRELOAD = true;			// preload all chunks in cache on initialization on main thread - !WARNING! COMPUTATIONALLY AND SPACE INTENSIVE
+	static constexpr bool CACHE_PRELOAD = 0;			// preload all chunks in cache on initialization on main thread - !WARNING! COMPUTATIONALLY AND SPACE INTENSIVE
 	static constexpr int POLL_DELAY_MILLIS = 200;		// millisecond delay between load request polling while empty
 	const std::chrono::milliseconds POLL_DELAY;
 
@@ -75,16 +75,14 @@ private:
 	// chunk loading routine
 	void pollLoadRequests() {
 		while (polling) {
-			static ChunkLoadRequest clr;
-			static GLInitRequest glir;
+			static GLInitRequest glr;
 			if (loadQueue.empty()) std::this_thread::sleep_for(POLL_DELAY);	// poll after delay for efficiency - maybe use condition variable instead of poll delay to avoid busy waiting?
 			else {
-				clr = loadQueue.front();
+				printf("generating chunk [%d, %d]\n", loadQueue.front().chunkx, loadQueue.front().chunkz);
+				loadQueue.front().chunk->chunk = Chunk(loadQueue.front().chunkx, loadQueue.front().chunkz);	// load requested chunk
+				glr.chunk = loadQueue.front().chunk;
+				initQueue.push(glr);																		// create gl init request
 				loadQueue.pop();
-				printf("generating chunk [%d, %d]\n", clr.chunkx, clr.chunkz);
-				clr.chunk->chunk = Chunk(clr.chunkx, clr.chunkz);					// load requested chunk
-				glir.chunk = clr.chunk;
-				initQueue.push(glir);												// create gl init request
 			}
 			
 		}
@@ -163,12 +161,10 @@ public:
 
 	// chunk initialization routine - call this once per render loop from gl context thread
 	void pollInitRequests() {
-		static GLInitRequest ginit;
 		if (!initQueue.empty()) {
-			ginit = initQueue.front();
+			initQueue.front().chunk->chunk.glLoad();
+			initQueue.front().chunk->status = CACHESTATUS::VALID;
 			initQueue.pop();
-			ginit.chunk->chunk.glLoad();
-			ginit.chunk->status = CACHESTATUS::VALID;
 		}
 	}
 
