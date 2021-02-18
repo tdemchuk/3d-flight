@@ -34,14 +34,14 @@ void window_resize_callback(GLFWwindow* window, int w, int h);
 
 
 // glob vars
-#define DEFAULT_WIDTH 1000
-#define DEFAULT_HEIGHT 1000
+#define DEFAULT_WIDTH 700
+#define DEFAULT_HEIGHT 700
 unsigned int width, height;
 
 float deltatime = 0;
 float lastframe = 0;
 
-TestCamera cam((float)width/(float)height, glm::vec3(0, 25, 17));
+TestCamera cam((float)width/(float)height, glm::vec3(0, 50, 0));
 
 
 // initializes GLAD and loads OpenGL function pointers
