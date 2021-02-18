@@ -23,12 +23,13 @@ private:
 
 	// class constants
 	static constexpr int	STRIDE		= 6;							// stride for mesh data - # components per vertex [3 position, 3 normal, 3 tex (coming soon)]
-	static constexpr int	CHUNK_WIDTH = 500;							// chunk consumes a square width by width grid in world space - MAKE MULTIPLE OF 2
-	static constexpr float  SCALE		= 4.0f;							// width of one cell in world space - SHOULD DIVIDE CHUNK_WIDTH EVENLY
+	static constexpr int	CHUNK_WIDTH = 1000;							// chunk consumes a square width by width grid in world space - MAKE MULTIPLE OF 2 - Default 1000
+	static constexpr float  SCALE		= 10.0f;						// width of one cell in world space - SHOULD DIVIDE CHUNK_WIDTH EVENLY [LARGER = BETTER PERFORMANCE, WORSE DETAIL]
 	static constexpr float	DENSITY		= 1.0f / SCALE;					// determines poly density in terrain chunk mesh - inversely proportional to cell scale (> 1 = smaller cells = more polys in mesh)
 	static constexpr int	DIM			= (int)(DENSITY * CHUNK_WIDTH);	// dimension of terrain grid in # quads
 	static constexpr int	VDIM		= DIM + 1;						// dimension of terrain grid in # vertices (celldim + 1)
-	//static float*			mesh;										// vertex, normal, and texture data for terrain chunk
+	static constexpr float	MAX_AMPLITUDE = 24.3f;						// maximum height or depth of terrain
+	static constexpr float	FREQUENCY = 0.001f;							// terrain variance scaling factor
 	static int*				chunk_index;								// index array for all chunk objects
 	static unsigned int		ebo;
 
@@ -82,9 +83,7 @@ private:
 	static void freeSharedResources() {													// cleanup shared chunk data
 		glDeleteBuffers(1, &ebo);
 	}
-	// prepare object for rendering with opengl
-	// only call this on thread associated with opengl context
-	void glLoad() {
+	void glLoad() {																		// prepare object for rendering with opengl - only call this on thread associated with opengl context
 		// setup GL buffers
 		glGenVertexArrays(1, &vao);
 		glGenBuffers(1, &vbo);
@@ -101,16 +100,16 @@ private:
 
 		// mesh data unnecessary after GPU upload
 		delete[] mesh;
+		mesh = nullptr;
 	}
 	inline float computeHeight(float x, float z) {										// compute and return height at specified XZ plane coordinate in world space
-		constexpr float MAX_AMPLITUDE = 18.3f;											// https://www.redblobgames.com/maps/terrain-from-noise/
-		constexpr float FREQUENCY = 0.003f;
-		glm::vec2 coord(x, z);
+		glm::vec2 coord(x, z);															// https://www.redblobgames.com/maps/terrain-from-noise/
+		coord *= FREQUENCY;
 		float elevation =
-			1.0f * (glm::simplex(1.0f * FREQUENCY * coord) + 1) / 2.0f +				// apply common frequency scale to all octaves
-			0.5f * (glm::simplex(2.0f * FREQUENCY * coord) + 1) / 2.0f +
-			0.25f * (glm::simplex(4.0f * FREQUENCY * coord) + 1) / 2.0f;
-		elevation = (float)pow(elevation, 2.5);
+			(glm::simplex(coord) + 1) / 2.0f +				// apply common frequency scale to all octaves
+			0.5f * (glm::simplex(2.0f * coord) + 1) / 2.0f +
+			0.25f * (glm::simplex(4.0f * coord) + 1) / 2.0f;
+		elevation = (float)pow(elevation, 4);
 		return MAX_AMPLITUDE * elevation - MAX_AMPLITUDE;
 		//return (float)(cos(0.7 * (double)x)); - test sinusoidal heightmap
 	}
@@ -145,10 +144,10 @@ private:
 	}
 	inline glm::vec3 computeNormal(float* mesh, int x, int z, float wx, float wz) {		// return height-approximated normal vector for provided vertex
 		float l, r, d, u;																// uses "finite difference" method - https://stackoverflow.com/questions/13983189/opengl-how-to-calculate-normals-in-a-terrain-height-grid
-		l = height(mesh, x - 1, z, wx, wz);												// optional more accurate method: https://stackoverflow.com/questions/45477806/general-method-for-calculating-smooth-vertex-normals-with-100-smoothness
-		r = height(mesh, x + 1, z, wx, wz);
-		u = height(mesh, x, z - 1, wx, wz);
-		d = height(mesh, x, z + 1, wx, wz);
+		l = height(mesh, x - 1, z, wx - SCALE, wz);												// optional more accurate method: https://stackoverflow.com/questions/45477806/general-method-for-calculating-smooth-vertex-normals-with-100-smoothness
+		r = height(mesh, x + 1, z, wx + SCALE, wz);
+		u = height(mesh, x, z - 1, wx, wz - SCALE);
+		d = height(mesh, x, z + 1, wx, wz + SCALE);
 		return glm::normalize(glm::vec3(l - r, 2.0f, d - u));
 	}
 
@@ -157,12 +156,12 @@ private:
 	float* mesh;					// vertex, normal, and texture data for terrain chunk to be uploaded to GPU
 	unsigned int vao, vbo;			// GL vertex array, buffer object ID's
 
-	// give cache private access
+	// give cache class private access
 	friend class Cache;		
 
 public:
 
-	// dummy constructor
+	// dummy constructor - stupid hack
 	Chunk(bool isDummy) {
 		if (true) {
 			mesh = new float[meshElements()];
@@ -189,19 +188,18 @@ public:
 		worldx -= boundaryOffset();								// transform coords to point to lower leftmost vertex of chunk
 		worldz -= boundaryOffset();
 
-		// generate mesh data in parallel - 3 threads - TODO: move to thread pool eventually to improve performance
+		// generate mesh position data in parallel - 3 threads - TODO: move to thread pool eventually to improve performance
 		static constexpr int NUMTHREADS = 3;
 		static constexpr int ZSPLIT1 = VDIM / NUMTHREADS;
 		static constexpr int ZSPLIT2 = ZSPLIT1 + ZSPLIT1;
-		//static constexpr int ZSPLIT3 = ZSPLIT2 + ZSPLIT2;
 		std::thread t1(&Chunk::generateMeshData, this, 0, ZSPLIT1, worldx, worldz);
 		std::thread t2(&Chunk::generateMeshData, this, ZSPLIT1, ZSPLIT2, worldx, worldz);
-		//std::thread t3(&Chunk::generateMeshData, this, ZSPLIT2, ZSPLIT3, worldx, worldz);
 		generateMeshData(ZSPLIT2, VDIM, worldx, worldz);
 		t1.join();
 		t2.join();
 		//t3.join();
 
+		// generate vertex normals for mesh
 		unsigned int index = 0;
 		float vx, vz;
 		glm::vec3 norm;
@@ -270,8 +268,6 @@ public:
 
 // Initialize static values
 int* Chunk::chunk_index = nullptr;
-//float* Chunk::mesh = nullptr;
-//int Chunk::chunk_refnum = 0;
 unsigned int Chunk::ebo = 0;
 
 #endif
