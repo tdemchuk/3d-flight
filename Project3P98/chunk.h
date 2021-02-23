@@ -9,11 +9,10 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/noise.hpp>
 #include <iostream>
-#include <cmath>
 #include <thread>
 
-// class data		
-//glm::vec3 chunk_color = glm::vec3(0.105f, 0.713f, 0.227f);
+// uncomment to draw chunk borders
+//#define DRAW_CHUNK_BORDERS
 
 /*
 	Simplified Terrain Chunk Class
@@ -27,14 +26,14 @@ private:
 
 	// class constants
 	static constexpr int	STRIDE		= 8;							// stride for mesh data - # components per vertex [3 position, 3 normal, 2 tex]
-	static constexpr int	CHUNK_WIDTH = 2000;							// chunk consumes a square width by width grid in world space - MAKE MULTIPLE OF 2 - Default 1000
-	static constexpr float  SCALE		= 16.0f;						// width of one cell in world space - SHOULD DIVIDE CHUNK_WIDTH EVENLY [LARGER = BETTER PERFORMANCE, WORSE DETAIL]
+	static constexpr int	CHUNK_WIDTH = 256;							// chunk consumes a square width by width grid in world space - MAKE MULTIPLE OF 2 - Default 1000
+	static constexpr float  SCALE		= 2.0f;							// width of one cell in world space - SHOULD DIVIDE CHUNK_WIDTH EVENLY [LARGER = BETTER PERFORMANCE, WORSE DETAIL]
 	static constexpr float	DENSITY		= 1.0f / SCALE;					// determines poly density in terrain chunk mesh - inversely proportional to cell scale (> 1 = smaller cells = more polys in mesh)
 	static constexpr int	DIM			= (int)(DENSITY * CHUNK_WIDTH);	// dimension of terrain grid in # quads
 	static constexpr int	VDIM		= DIM + 1;						// dimension of terrain grid in # vertices (celldim + 1)
-	static constexpr float	TEX_SCALE	= 10.0f;						// width of texture used in world space	- SHOULD DIVIDE CHUNK_WIDTH EVENLY	
-	static constexpr float	MAX_AMPLITUDE = 64.3f;						// maximum height or depth of terrain
-	static constexpr float	FREQUENCY = 0.0005f;						// terrain variance scaling factor
+	static constexpr float	TEX_SCALE	= 2.0f;							// width of texture used in world space	- SHOULD DIVIDE CHUNK_WIDTH EVENLY	
+	static constexpr float	MAX_AMPLITUDE = 14.3f;						// maximum height or depth of terrain
+	static constexpr float	FREQUENCY	= 0.003;//0.0005f;				// terrain variance scaling factor
 	static int*				chunk_index;								// index array for all chunk objects
 	static unsigned int		ebo;
 	static unsigned int		tex;
@@ -47,7 +46,7 @@ private:
 	static constexpr int numTriangles() { return 2 * DIM * DIM; }
 	static constexpr int indexElements() { return 3 * numTriangles(); }
 	static constexpr float boundaryOffset() { return SCALE * DIM / 2.0f; }
-	static constexpr float texIncrement() { return TEX_SCALE / SCALE; }
+	static constexpr float texIncrement() { return SCALE / TEX_SCALE; }
 
 	// helper functions
 	static void initIndexArray() {
@@ -81,7 +80,7 @@ private:
 	static void computeSharedResources() {												// generate and link shared chunk data - call from main thread
 		// load and generate grass texture
 		int texwidth, texheight, texnumchannels;
-		unsigned char* img = stbi_load("textures/grass2.jpg",&texwidth, &texheight, &texnumchannels, 0);
+		unsigned char* img = stbi_load("textures/grass_top.png",&texwidth, &texheight, &texnumchannels, 0);
 		if (!img) {
 			printf("Chunk texture load failed.\n");
 			stbi_image_free(img);
@@ -95,7 +94,7 @@ private:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texwidth, texheight, 0, GL_RGB, GL_UNSIGNED_BYTE, img);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texwidth, texheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, img);	// GL_RGBA if png, GL_RBG if jpeg
 		glGenerateMipmap(GL_TEXTURE_2D);
 		stbi_image_free(img);
 
@@ -135,19 +134,23 @@ private:
 		glm::vec2 coord(x, z);															// https://www.redblobgames.com/maps/terrain-from-noise/
 		coord *= FREQUENCY;
 		float elevation =
-			(glm::simplex(coord) + 1) / 2.0f +				// apply common frequency scale to all octaves
-			0.5f * (glm::simplex(2.0f * coord) + 1) / 2.0f +
-			0.25f * (glm::simplex(4.0f * coord) + 1) / 2.0f;
-		elevation = (float)pow(elevation, 4);
-		return MAX_AMPLITUDE * elevation - MAX_AMPLITUDE;
+		(glm::simplex(coord) + 1) +							// apply common frequency scale to all octaves
+		0.5f * (glm::simplex(1.93f * coord)) +
+		0.25f * (glm::simplex(4.07f * coord)) +
+		0.125f * (glm::simplex(7.91f * coord)) +
+		0.0625f * (glm::simplex(16.1f * coord)) +
+		0.03125f * (glm::simplex(32.07f * coord));
+		elevation /= 1.5f;
+		elevation = (float)pow(elevation, 2);
+		return MAX_AMPLITUDE * elevation - MAX_AMPLITUDE / 2;
 		//return (float)(cos(0.7 * (double)x)); - test sinusoidal heightmap
 	}
-	void generateMeshData(unsigned int startz, unsigned int endz, float worldx, float worldz) {
+	void generateMeshData(unsigned int startz, unsigned int endz, float worldx, float worldz, float startTexV) {
 		// generate mesh data
 		float px = worldx;
 		float py = 0.0f;
 		float pz = worldz + (SCALE * startz);
-		float ts = 0, tt = 0, intpart;
+		float tu = 0, tv = startTexV;
 		unsigned int index = VDIM * startz;
 		unsigned int vindex = 3 * index;
 		index *= STRIDE;
@@ -162,17 +165,15 @@ private:
 				vertex[vindex++] = py;
 				vertex[vindex++] = pz;
 				index += 3;						// skip normal component for now
-				mesh[index++] = ts;
-				mesh[index++] = tt;
+				mesh[index++] = tu;
+				mesh[index++] = tv;
 				px += SCALE;
-				ts += 0.5f;
-				if (ts > 1.0f) ts = std::modf(ts, &intpart);
+				tu += texIncrement();
 			}
 			px = worldx;
 			pz += SCALE;
-			ts = 0.0f;
-			tt += 0.5f;
-			if (tt > 1.0f) tt = std::modf(tt, &intpart);
+			tu = 0.0f;
+			tv += texIncrement();
 		}
 	}
 	inline float height(float* mesh, int x, int z, float wx, float wz) {				// return height of specified vertex - must compute out of bounds coordinates
@@ -229,9 +230,9 @@ public:
 		static constexpr int NUMTHREADS = 3;
 		static constexpr int ZSPLIT1 = VDIM / NUMTHREADS;
 		static constexpr int ZSPLIT2 = ZSPLIT1 + ZSPLIT1;
-		std::thread t1(&Chunk::generateMeshData, this, 0, ZSPLIT1, worldx, worldz);
-		std::thread t2(&Chunk::generateMeshData, this, ZSPLIT1, ZSPLIT2, worldx, worldz);
-		generateMeshData(ZSPLIT2, VDIM, worldx, worldz);
+		std::thread t1(&Chunk::generateMeshData, this, 0, ZSPLIT1, worldx, worldz, 0);
+		std::thread t2(&Chunk::generateMeshData, this, ZSPLIT1, ZSPLIT2, worldx, worldz, (ZSPLIT1 * texIncrement()));
+		generateMeshData(ZSPLIT2, VDIM, worldx, worldz, (ZSPLIT2 * texIncrement()));
 		t1.join();
 		t2.join();
 		//t3.join();
@@ -247,14 +248,15 @@ public:
 				index += 2;										// skip y component
 				vz = mesh[index++];
 				norm = computeNormal(mesh, x, y, vx, vz);
+#ifdef DRAW_CHUNK_BORDERS
+				if (x == 0 || x == DIM || y == 0 || y == DIM) norm *= -1;		// invert normal to show chunk borders
+#endif
 				mesh[index++] = norm.x;
 				mesh[index++] = norm.y;
 				mesh[index++] = norm.z;
 				index += 2;										// skip texture coords
 			}
 		}
-
-		
 	}
 
 	// Destructor - cleanup

@@ -40,6 +40,7 @@ unsigned int width, height;
 
 float deltatime = 0;
 float lastframe = 0;
+float FPS = 0;
 
 TestCamera cam((float)width/(float)height, glm::vec3(0, 50, 0));
 
@@ -193,16 +194,30 @@ int main(int argc, char* argv[]) {
 	chunkshader.setVec3("dlight.specular", 0.2f, 0.2f, 0.2f);
 	*/
 	
-	cam.renderDist = 1000.0f;
-	cam.redefineProjectionMatrix((float)width/(float)height);
+	//cam.renderDist = 1000.0f;
+	//cam.redefineProjectionMatrix((float)width/(float)height);
 	World w(cam);
+
+	// FPS calculation via simple moving average - https://stackoverflow.com/a/87732
+	constexpr int SAMPLES = 50;
+	int frameIndex = 0;
+	float fpsSum = 0;
+	float fpsSamples[SAMPLES];
+	for (int i = 0; i < SAMPLES; i++) fpsSamples[i] = 0;
+	float currentFrame;
 
 	// render loop
 	while (!glfwWindowShouldClose(window)) {	
 										// time logic
-		float currentFrame = (float)glfwGetTime();
+		currentFrame = (float)glfwGetTime();
 		deltatime = currentFrame - lastframe;
 		lastframe = currentFrame;
+										// compute FPS
+		fpsSum -= fpsSamples[frameIndex];
+		fpsSum += deltatime;
+		fpsSamples[frameIndex] = deltatime;
+		FPS = (float)SAMPLES / fpsSum;			// compute # frame samples / total time (in seconds)
+		frameIndex = (frameIndex + 1) % SAMPLES;
 
 		keyboard_input(window);			// get keyboard input
 
@@ -264,6 +279,8 @@ void keyboard_input(GLFWwindow* window) {		// not technically a "callback", rath
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) cam.ProcessKeyboard(RIGHT, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) cam.ProcessKeyboard(UP, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) cam.ProcessKeyboard(DOWN, deltatime);
+
+	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) printf("FPS: %.1f.\n", FPS);
 }
 
 void mouse_callback(GLFWwindow* window, double x, double y) {

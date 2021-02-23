@@ -61,9 +61,24 @@
     <None Include="shaders\chunkshader.fs">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="shaders\basicwatershader.fs">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\grass_1080_seamless.jpg">
+      <Filter>Resource Files\textures</Filter>
+    </Image>
+    <Image Include="textures\grass.jpg">
+      <Filter>Resource Files\textures</Filter>
+    </Image>
+    <Image Include="textures\grass_2k.jpg">
+      <Filter>Resource Files\textures</Filter>
+    </Image>
+    <Image Include="textures\grass_top.png">
+      <Filter>Resource Files\textures</Filter>
+    </Image>
+    <Image Include="textures\grass2.jpg">
       <Filter>Resource Files\textures</Filter>
     </Image>
   </ItemGroup>

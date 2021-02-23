@@ -56,7 +56,10 @@ private:
 	Cache			cache;								// terrain cache
 	SpiralIterator	spit;
 	Shader			chunkshader;						// shader programs used in world
+	Shader			waterShader;
 	glm::vec3		sunPosition;						// position of the sun in the world - directional light
+
+	unsigned int waterVAO, waterVBO, waterEBO;
 
 public:
 
@@ -68,6 +71,7 @@ public:
 		cache(activeChunk.x - Cache::dim()/2, activeChunk.y - Cache::dim()/2),
 		spit(),
 		chunkshader("shaders/chunkshader.vs", "shaders/chunkshader.fs"),
+		waterShader("shaders/basic.vs", "shaders/basicwatershader.fs"),
 		origin(0.0f)
 	{
 		// setup shader values
@@ -78,6 +82,46 @@ public:
 		chunkshader.setVec3("dlight.ambient", 0.2f, 0.2f, 0.2f);
 		chunkshader.setVec3("dlight.diffuse", 0.5f, 0.5f, 0.5f);
 		chunkshader.setVec3("dlight.specular", 0.2f, 0.2f, 0.2f);
+
+		waterShader.use();
+		waterShader.setVec3("dlight.direction", lightdir);
+		waterShader.setVec3("dlight.ambient", 0.2f, 0.2f, 0.2f);
+		waterShader.setVec3("dlight.diffuse", 0.5f, 0.5f, 0.5f);
+		waterShader.setVec3("dlight.specular", 0.2f, 0.2f, 0.2f);
+
+
+		// setup water table plane - for demo purposes - make part of chunk eventually
+		constexpr float f0 = -1000;
+		constexpr float f1 = 1000;
+		constexpr float wHeight = 0.0f;
+		float waterTableVertices[] = {						// define 4 vertices of infinite water table plane
+			f0, wHeight, f0,
+			f1, wHeight, f0,
+			f0, wHeight, f1,
+			f1, wHeight, f1,
+		};
+		int waterTableIndices[] = {
+			0, 1, 2,
+			2, 1, 3
+		};
+		glGenVertexArrays(1, &waterVAO);
+		glGenBuffers(1, &waterVBO);
+		glGenBuffers(1, &waterEBO);
+		glBindVertexArray(waterVAO);
+		glBindBuffer(GL_ARRAY_BUFFER, waterVBO);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(waterTableVertices), waterTableVertices, GL_STATIC_DRAW);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, waterEBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(waterTableIndices), waterTableIndices, GL_STATIC_DRAW);
+		glBindVertexArray(0);
+	}
+
+	// destructor
+	~World() {
+		glDeleteVertexArrays(1, &waterVAO);
+		glDeleteBuffers(1, &waterVBO);
+		glDeleteBuffers(1, &waterEBO);
 	}
 
 	// update world - perform physics updates, draw world within render distance, etc...
@@ -102,6 +146,16 @@ public:
 			cache.draw(spit.getx() + activeChunk.x, spit.getz() + activeChunk.y);
 			spit.next();
 		}
+
+		// draw water table
+		waterShader.use();
+		waterShader.setVec3("viewpos", cam.Position);
+		waterShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBindVertexArray(waterVAO);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glDisable(GL_BLEND);
 	}
 };
 

@@ -55,6 +55,7 @@ private:
 	static constexpr int DIM = 30;						// cache matrix dimension [recommended >= 10] - SHOULD BE LARGE ENOUGH TO FIT WORLD RENDER WIDTH
 	static constexpr int CACHE_VOLUME = DIM * DIM;		// cache volume - maximum total chunks cached at any time
 	static constexpr bool CACHE_PRELOAD = 0;			// preload all chunks in cache on initialization on main thread - !WARNING! COMPUTATIONALLY AND SPACE INTENSIVE
+	static constexpr int QUEUE_MAX_REQ = 20;
 	static constexpr int POLL_DELAY_MILLIS = 200;		// millisecond delay between load request polling while empty
 	const std::chrono::milliseconds POLL_DELAY;
 
@@ -207,12 +208,14 @@ public:
 		}
 		else if (cc.status == CACHESTATUS::INVALID) {				// request this chunk to be loaded into cache, then fail the draw gracefully
 			//printf("requesting load chunk [%d, %d] at array [%d, %d]\n", chunkx, chunkz, index_x, index_z);
-			cc.status = CACHESTATUS::QUEUED;						// this way the chunk will be drawn when it is ready without causing massive lag and frame drops
-			ChunkLoadRequest clr;
-			clr.chunk = &cc;
-			clr.chunkx = chunkx;
-			clr.chunkz = chunkz;
-			loadQueue.push(clr);
+			if (loadQueue.size() <= QUEUE_MAX_REQ) {
+				cc.status = CACHESTATUS::QUEUED;						// this way the chunk will be drawn when it is ready without causing massive lag and frame drops
+				ChunkLoadRequest clr;
+				clr.chunk = &cc;
+				clr.chunkx = chunkx;
+				clr.chunkz = chunkz;
+				loadQueue.push(clr);
+			}
 		}
 	}
 };

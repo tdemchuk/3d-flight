@@ -155,11 +155,16 @@
   <ItemGroup>
     <None Include="shaders\basic.fs" />
     <None Include="shaders\basic.vs" />
+    <None Include="shaders\basicwatershader.fs" />
     <None Include="shaders\chunkshader.fs" />
     <None Include="shaders\chunkshader.vs" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="textures\grass.jpg" />
+    <Image Include="textures\grass2.jpg" />
     <Image Include="textures\grass_1080_seamless.jpg" />
+    <Image Include="textures\grass_2k.jpg" />
+    <Image Include="textures\grass_top.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

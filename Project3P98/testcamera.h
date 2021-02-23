@@ -83,7 +83,7 @@ public:
 
     // compute projection matrix for this camera object
     void redefineProjectionMatrix(float aspectRatio) {
-        proj = glm::perspective(glm::radians(45.0f), 1000.0f/1000.0f, 0.1f, 10000.0f);           // horizon on earth is approximately 4.7km (4700 m) away
+        proj = glm::perspective(glm::radians(45.0f), 1000.0f/1000.0f, 0.1f, 10000.0f);           // horizon on earth is approximately 4.7km (4700 m) away from 5ft height, based on height from ground
     }
 
     // returns the view matrix calculated using Euler Angles and the LookAt Matrix

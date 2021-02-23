@@ -19,28 +19,28 @@
 class Shader {
 private:
 
-    // check compilation status of shader fopr errors
-    static void checkShaderCompileStatus(unsigned int shader, const std::string& type) {
+    // check compilation status of shader for errors
+    static void checkShaderCompileStatus(unsigned int shader, const std::string& type, const std::string& name) {
         int status;
         constexpr int errlog_size = 1024;
         char errlog[errlog_size];
         glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
         if (status == 0) {
             glGetShaderInfoLog(shader, errlog_size, nullptr, errlog);
-            printf("%s shader %d failed to compile. Error Log:\n %s\n", type.c_str(), shader, errlog);
+            printf("%s shader %d [%s] failed to compile. Error Log:\n %s\n", type.c_str(), shader, name.c_str(), errlog);
             exit(EXIT_FAILURE);
         }
     }
 
     // check linking status of shader program for errors
-    static void checkShaderLinkStatus(unsigned int shader) {
+    static void checkShaderLinkStatus(unsigned int shader, const std::string& name) {
         int status;
         constexpr int errlog_size = 1024;
         char errlog[errlog_size];
         glGetProgramiv(shader, GL_LINK_STATUS, &status);
         if (status == 0) {
             glGetProgramInfoLog(shader, errlog_size, nullptr, errlog);
-            printf("Shader program %d failed to link. Error Log:\n %s\n", shader, errlog);
+            printf("Shader program %d [%s] failed to link. Error Log:\n %s\n", shader, name.c_str(), errlog);
             exit(EXIT_FAILURE);
         }
     }
@@ -62,6 +62,9 @@ public:
         std::ifstream vShaderFile;
         std::ifstream fShaderFile;
         std::ifstream gShaderFile;
+
+        std::string shaderName = std::string(vertexPath) + " | " + std::string(fragmentPath);
+        if (geometryPath != nullptr) shaderName = shaderName + " | " + std::string(geometryPath);
 
         // ensure ifstream objects can throw exceptions:
         vShaderFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
@@ -105,12 +108,12 @@ public:
         vertex = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(vertex, 1, &vShaderCode, NULL);
         glCompileShader(vertex);
-        checkShaderCompileStatus(vertex, "Vertex");
+        checkShaderCompileStatus(vertex, "Vertex", shaderName);
 
         fragment = glCreateShader(GL_FRAGMENT_SHADER);
         glShaderSource(fragment, 1, &fShaderCode, NULL);
         glCompileShader(fragment);
-        checkShaderCompileStatus(fragment, "Fragment");
+        checkShaderCompileStatus(fragment, "Fragment", shaderName);
 
         // if geometry shader is given, compile geometry shader
         unsigned int geometry;
@@ -120,7 +123,7 @@ public:
             geometry = glCreateShader(GL_GEOMETRY_SHADER);
             glShaderSource(geometry, 1, &gShaderCode, NULL);
             glCompileShader(geometry);
-            checkShaderCompileStatus(geometry, "Geometry");
+            checkShaderCompileStatus(geometry, "Geometry", shaderName);
         }
 
         // link shader prog
@@ -129,7 +132,7 @@ public:
         if (geometryPath != nullptr)
             glAttachShader(ID, geometry);
         glLinkProgram(ID);
-        checkShaderLinkStatus(ID);
+        checkShaderLinkStatus(ID, shaderName);
 
         // delete the shaders as they're linked into our program now and no longer necessery
         glDeleteShader(vertex);
