@@ -142,7 +142,7 @@ private:
 		0.03125f * (glm::simplex(32.07f * coord));
 		elevation /= 1.5f;
 		elevation = (float)pow(elevation, 2);
-		return MAX_AMPLITUDE * elevation - MAX_AMPLITUDE / 2;
+		return MAX_AMPLITUDE * elevation - MAX_AMPLITUDE / 4;
 		//return (float)(cos(0.7 * (double)x)); - test sinusoidal heightmap
 	}
 	void generateMeshData(unsigned int startz, unsigned int endz, float worldx, float worldz, float startTexV) {

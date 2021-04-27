@@ -25,6 +25,11 @@
 	When a chunk is requested to be drawn via the cache, the cache first checks to see if that chunk is cached.
 	If so, the cached chunk is accessed and drawn. If not, the cache domain lines are shifted approriately and
 	the corresponding row or column of old chunk data is reloaded with updated chunks.
+
+	TODO: change draw call to accept chunk coordinate along with corresponding level of detail for that chunk. This allows
+		the level class to determine the level of detail required for each chunk
+	TODO: change Chunk Load Request Queue to priority queue -> allow active chunk to be drawn with highest priority
+		(priority can coincide with level of detail for chunk)
 */
 class Cache {
 private:
@@ -55,7 +60,6 @@ private:
 	static constexpr int DIM = 30;						// cache matrix dimension [recommended >= 10] - SHOULD BE LARGE ENOUGH TO FIT WORLD RENDER WIDTH
 	static constexpr int CACHE_VOLUME = DIM * DIM;		// cache volume - maximum total chunks cached at any time
 	static constexpr bool CACHE_PRELOAD = 0;			// preload all chunks in cache on initialization on main thread - !WARNING! COMPUTATIONALLY AND SPACE INTENSIVE
-	static constexpr int QUEUE_MAX_REQ = 20;
 	static constexpr int POLL_DELAY_MILLIS = 200;		// millisecond delay between load request polling while empty
 	const std::chrono::milliseconds POLL_DELAY;
 
@@ -207,15 +211,12 @@ public:
 			cc.chunk.draw();
 		}
 		else if (cc.status == CACHESTATUS::INVALID) {				// request this chunk to be loaded into cache, then fail the draw gracefully
-			//printf("requesting load chunk [%d, %d] at array [%d, %d]\n", chunkx, chunkz, index_x, index_z);
-			if (loadQueue.size() <= QUEUE_MAX_REQ) {
-				cc.status = CACHESTATUS::QUEUED;						// this way the chunk will be drawn when it is ready without causing massive lag and frame drops
-				ChunkLoadRequest clr;
-				clr.chunk = &cc;
-				clr.chunkx = chunkx;
-				clr.chunkz = chunkz;
-				loadQueue.push(clr);
-			}
+			cc.status = CACHESTATUS::QUEUED;						// this way the chunk will be drawn when it is ready without causing massive lag and frame drops
+			ChunkLoadRequest clr;
+			clr.chunk = &cc;
+			clr.chunkx = chunkx;
+			clr.chunkz = chunkz;
+			loadQueue.push(clr);
 		}
 	}
 };

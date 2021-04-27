@@ -1,6 +1,6 @@
 Setup Checklist:
 
-- Debug as x64
+- **Make sure to set Config to x64
 - Using GLFW and GLAD
 	- https://www.glfw.org/download.html
 	- https://glad.dav1d.de/
