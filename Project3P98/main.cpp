@@ -1,7 +1,7 @@
 /*
 	COSC 3P98 - Term Project
 	@author Tennyson Demchuk | 6190532 | td16qg@brocku.ca
-	@author 
+	@author Daniel Sokic | 6164545 | ds16sz@brocku.ca
 	@author 
 	@date 02.08.2021
 */
@@ -16,7 +16,7 @@
 
 #include "world.h"
 #include "shader.h"			// shader loading library - https://learnopengl.com/code_viewer_gh.php?code=includes/learnopengl/shader.h
-#include "testcamera.h"		// test camera - MUST BE REPLACED W/ CUSTOM FLIGHTSIM CAM USING QUATERNIONS
+#include "camera.h"		    // camera - MUST BE REPLACED W/ CUSTOM FLIGHTSIM CAM USING QUATERNIONS
 #include <glm/glm.hpp>		// GLM - https://glm.g-truc.net/0.9.9/index.html
 #include <glm/gtc/matrix_transform.hpp>
 #include <glad/glad.h>		// For GLAD - ensure to include before GLFW
@@ -29,7 +29,7 @@
 							// system and event callbacks
 void terminateProgram();
 void keyboard_input(GLFWwindow* window);
-void mouse_callback(GLFWwindow* window, double x, double y);
+//void mouse_callback(GLFWwindow* window, double x, double y);
 void window_resize_callback(GLFWwindow* window, int w, int h);
 
 
@@ -42,7 +42,7 @@ float deltatime = 0;
 float lastframe = 0;
 float FPS = 0;
 
-TestCamera cam((float)width/(float)height, glm::vec3(0, 50, 0));
+Camera cam((float)width/(float)height, glm::vec3(0, 50, 0));
 
 
 // initializes GLAD and loads OpenGL function pointers
@@ -63,7 +63,7 @@ GLFWwindow* createWindow(unsigned int w, unsigned int h) {
 	width = w; height = h;
 	glfwMakeContextCurrent(window);											// set focus																				
 	glfwSetFramebufferSizeCallback(window, window_resize_callback);			// bind resize callback
-	glfwSetCursorPosCallback(window, mouse_callback);						// bind mouse motion callback
+	//glfwSetCursorPosCallback(window, mouse_callback);						// bind mouse motion callback
 	return window;
 }
 
@@ -230,7 +230,7 @@ int main(int argc, char* argv[]) {
 		/*
 		shader.use();		// use basic shader
 		view = cam.GetViewMatrix();
-		viewpos = cam.Position;
+		viewpos = cam.camPos;
 		shader.setMat4("view", view);
 		shader.setVec3("viewpos", viewpos);
 
@@ -273,17 +273,18 @@ void keyboard_input(GLFWwindow* window) {		// not technically a "callback", rath
 	else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);	// full
 
 	// controls
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) cam.ProcessKeyboard(FORWARD, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) cam.ProcessKeyboard(BACKWARD, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) cam.ProcessKeyboard(LEFT, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) cam.ProcessKeyboard(RIGHT, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) cam.ProcessKeyboard(UP, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) cam.ProcessKeyboard(DOWN, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) cam.ProcessKeyboard(PITCHDOWN, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) cam.ProcessKeyboard(PITCHUP, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) cam.ProcessKeyboard(YAWLEFT, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) cam.ProcessKeyboard(YAWRIGHT, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) cam.ProcessKeyboard(ROLLLEFT, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) cam.ProcessKeyboard(ROLLRIGHT, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) cam.ProcessKeyboard(THRUST, deltatime);
 
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) printf("FPS: %.1f.\n", FPS);
 }
 
-void mouse_callback(GLFWwindow* window, double x, double y) {
+/*void mouse_callback(GLFWwindow* window, double x, double y) {
 	static bool first = true;
 	static float lastx = width / 2.0f;
 	static float lasty = height / 2.0f;
@@ -296,8 +297,8 @@ void mouse_callback(GLFWwindow* window, double x, double y) {
 	float yoffset = lasty - (float)y;		// y coord reversed
 	lastx = (float)x;
 	lasty = (float)y;
-	cam.ProcessMouseMovement(xoffset, yoffset);
-}
+	//cam.ProcessMouseMovement(xoffset, yoffset);
+}*/
 
 void window_resize_callback(GLFWwindow* window, int w, int h) {
 	width = w;
