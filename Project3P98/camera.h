@@ -228,22 +228,26 @@ public:
         }
 
         if (oldYaw <= 45 && yaw >= 45) {
+            printf("TEST\n");
             upOffsetX *= -1;
             upOffsetZ *= -1;
             swap = !swap;
         }
         if (yaw <= 45 && oldYaw >= 45) {
+            printf("TEST2\n");
             upOffsetX *= -1;
             upOffsetZ *= -1;
             swap = !swap;
         }
 
         if (oldYaw <= 225 && yaw >= 225) {
+            printf("TEST3\n");
             upOffsetX *= -1;
             upOffsetZ *= -1;
             swap = !swap;
         }
         if (yaw <= 225 && oldYaw >= 225) {
+            printf("TEST4\n");
             upOffsetX *= -1;
             upOffsetZ *= -1;
             swap = !swap;
@@ -272,15 +276,49 @@ public:
     {
         xoffset *= SENSITIVITY;
         yoffset *= SENSITIVITY;
+        float oldYaw = yaw;
 
         yaw += xoffset;
         pitch += yoffset;
+        printf("Yaw:%f\n",yaw);
+        if (oldYaw <= 45 && yaw >= 45) {
+            upOffsetX *= -1;
+            upOffsetZ *= -1;
+            swap = !swap;
+        }
+        if (yaw <= 45 && oldYaw >= 45) {
+            upOffsetX *= -1;
+            upOffsetZ *= -1;
+            swap = !swap;
+        }
+
+        if (oldYaw <= 225 && yaw >= 225) {
+            upOffsetX *= -1;
+            upOffsetZ *= -1;
+            swap = !swap;
+        }
+        if (yaw <= 225 && oldYaw >= 225) {
+            upOffsetX *= -1;
+            upOffsetZ *= -1;
+            swap = !swap;
+        }
+
+        if (upOffsetX < -0.3) upOffsetX = -0.3;
+        if (upOffsetY < -5) upOffsetY = -5;
+        if (upOffsetZ < -0.3) upOffsetZ = -0.3;
+        if (upOffsetX > 0.3) upOffsetX = 0.3;
+        if (upOffsetY > 5) upOffsetY = 5;
+        if (upOffsetZ > 0.3) upOffsetZ = 0.3;
         if (pitch > 89.0f)
             pitch = 89.0f;
         if (pitch < -89.0f)
             pitch = -89.0f;
 
         updateCameraVectors();
+
+        camUp.x += upOffsetX;
+        camUp.y += upOffsetY;
+        camUp.z += upOffsetZ;
     }
 
 private:
