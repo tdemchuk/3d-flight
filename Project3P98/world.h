@@ -133,19 +133,12 @@ public:
 
 	// update world - perform physics updates, draw world within render distance, etc...
 	// - deltatime = time difference between current and previous frames [useful for physics]
-	// returns status code
-	int update(double deltatime) {
+	void update(double deltatime) {
 
 		// compute active chunk coords
 		activeChunk.x = mapchunk(cam.camPos.x);
 		activeChunk.y = mapchunk(cam.camPos.z);
-		
-		if (cam.camPos.y <= testHeight(cam.camPos.x, cam.camPos.z)) {
-			printf("YOU'VE CRASHED!!\n");
-			return 0;
-		}
-		
-		// update shaders for drawing
+		// setup chunk shader for drawing
 		chunkshader.use();
 		chunkshader.setVec3("viewpos", cam.camPos);
 		chunkshader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
@@ -163,7 +156,24 @@ public:
 			spit.next();
 		}
 
-		return 1;
+		// setup simple shader for objective drawing
+		//modelShader.use();
+		//modelShader.setVec3("viewpos", cam.camPos);
+		//modelShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
+		/*testShader.use();
+		testShader.setVec3("viewpos", cam.camPos);
+		testShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
+		obj.draw(deltatime, testShader);*/
+
+		// draw water table
+		waterShader.use();
+		waterShader.setVec3("viewpos", cam.camPos);
+		waterShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBindVertexArray(waterVAO);
+		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glDisable(GL_BLEND);
 	}
 };
 
