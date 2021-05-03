@@ -153,7 +153,7 @@ private:
 	}
 	inline float height(float* mesh, int x, int z, float wx, float wz) {				// return height of specified vertex - must compute out of bounds coordinates
 		if (x < 0 || x > DIM || z < 0 || z > DIM) return computeHeight(wx, wz);	
-		return mesh[STRIDE * (z * VDIM + x) + 1];		// return y component of vertex
+		return vertex[3 * (z * VDIM + x) + 1];		// return y component of vertex
 	}
 	inline glm::vec3 computeNormal(float* mesh, int x, int z, float wx, float wz) {		// return height-approximated normal vector for provided vertex
 		float l, r, d, u;																// uses "finite difference" method - https://stackoverflow.com/questions/13983189/opengl-how-to-calculate-normals-in-a-terrain-height-grid

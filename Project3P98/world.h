@@ -156,24 +156,6 @@ public:
 			spit.next();
 		}
 
-		// setup simple shader for objective drawing
-		//modelShader.use();
-		//modelShader.setVec3("viewpos", cam.camPos);
-		//modelShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
-		/*testShader.use();
-		testShader.setVec3("viewpos", cam.camPos);
-		testShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
-		obj.draw(deltatime, testShader);*/
-
-		// draw water table
-		waterShader.use();
-		waterShader.setVec3("viewpos", cam.camPos);
-		waterShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glBindVertexArray(waterVAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		glDisable(GL_BLEND);
 	}
 };
 

@@ -28,8 +28,6 @@
 #include <time.h>
 #include <iostream>
 #include <fstream>
-#include <windows.h>
-#include <mmsystem.h>
 #include <stdio.h>
 
 
@@ -177,7 +175,6 @@ int main(int argc, char* argv[]) {
 
 		//If difference <= 0 then we have gone below the terrain, ending the game.
 		if (curDif <= 0) {
-			PlaySound(TEXT("crash.wav"), NULL, SND_FILENAME | SND_ASYNC);
 			end = true;
 			printf("TOO LOW, YOU LOSE! PRESS ESCAPE TO EXIT!\n");
 			while (end) {
