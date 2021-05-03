@@ -158,17 +158,17 @@ int main(int argc, char* argv[]) {
 			cam.camPos.y = 30;
 		}
 
-		if (curDif <= 10) {
-			score += 10.0 / (cam.camPos.y - curTerrain);
-		}
-
-		if (cam.camPos.y <= curTerrain) {
+		if (curDif <= 0) {
 			end = true;
 			printf("TOO LOW, YOU LOSE! PRESS ESCAPE TO EXIT!\n");
 			while (end) {
 				end_keyboard(window);
 				glfwPollEvents();
 			}
+		}
+
+		if (curDif <= 10 && curDif >= 1) {
+			score += 10.0 / (cam.camPos.y - curTerrain);
 		}
 
 	}
