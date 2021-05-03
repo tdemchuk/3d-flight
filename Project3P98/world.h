@@ -7,7 +7,7 @@
 	@author Tennyson Demchuk
 	@author Daniel Sokic
 	@author Aditya Rajyaguru
-	@date 02.12.2021
+	@date 05.03.2021
 */
 
 #include "models.h"
@@ -67,10 +67,8 @@ private:
 	Texture			grasstex;							// textures used in terrain
 	Texture			sandtex;
 	Texture			stonetex;
-	glm::vec3		objspawn;
-	Objective		obj;
-
-	unsigned int waterVAO, waterVBO, waterEBO;
+	//glm::vec3		objspawn;
+	//Objective		obj;
 
 public:
 
@@ -85,9 +83,9 @@ public:
 		waterShader("shaders/basic.vs", "shaders/basicwatershader.fs"),
 		modelShader("shaders/basic.vs", "shaders/basic.fs"),
 		testShader("shaders/test.vs","shaders/test.fs"),
-		origin(0.0f),
-		objspawn(0,60,0),
-		obj(objspawn)
+		origin(0.0f)
+		//objspawn(0,60,0),
+		//obj(objspawn)
 	{
 		// load and generate terrain textures
 		grasstex.load("textures/grass_top.png");
@@ -126,47 +124,11 @@ public:
 		modelShader.setVec3("dlight.ambient", 0.2f, 0.2f, 0.2f);
 		modelShader.setVec3("dlight.diffuse", 0.5f, 0.5f, 0.5f);
 		modelShader.setVec3("dlight.specular", 0.2f, 0.2f, 0.2f);
-
-
-		// setup water table plane - for demo purposes - make part of chunk eventually
-		constexpr float f0 = -1000;
-		constexpr float f1 = 1000;
-		constexpr float wHeight = 0.0f;
-		float waterTableVertices[] = {						// define 4 vertices of infinite water table plane
-			f0, wHeight, f0, 0.0f, 1.0f, 0.0f,
-			f1, wHeight, f0, 0.0f, 1.0f, 0.0f,
-			f0, wHeight, f1, 0.0f, 1.0f, 0.0f,
-			f1, wHeight, f1, 0.0f, 1.0f, 0.0f
-		};
-		int waterTableIndices[] = {
-			0, 1, 2,
-			2, 1, 3
-		};
-		glGenVertexArrays(1, &waterVAO);
-		glGenBuffers(1, &waterVBO);
-		glGenBuffers(1, &waterEBO);
-		glBindVertexArray(waterVAO);
-		glBindBuffer(GL_ARRAY_BUFFER, waterVBO);
-		glBufferData(GL_ARRAY_BUFFER, sizeof(waterTableVertices), waterTableVertices, GL_STATIC_DRAW);
-		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, waterEBO);
-		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(waterTableIndices), waterTableIndices, GL_STATIC_DRAW);
-		glBindVertexArray(0);
 	}
 
 	// returns the height of the terrain at the given world coordinate
 	inline float testHeight(float x, float y) {
 		return cache.getHeight(mapchunk(x), mapchunk(y), x, y);
-	}
-
-	// destructor
-	~World() {
-		glDeleteVertexArrays(1, &waterVAO);
-		glDeleteBuffers(1, &waterVBO);
-		glDeleteBuffers(1, &waterEBO);
 	}
 
 	// update world - perform physics updates, draw world within render distance, etc...
@@ -182,39 +144,24 @@ public:
 			printf("YOU'VE CRASHED!!\n");
 			return 0;
 		}
-
-		// setup chunk shader for drawing
+		
+		// update shaders for drawing
 		chunkshader.use();
 		chunkshader.setVec3("viewpos", cam.camPos);
 		chunkshader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
 
+		//waterShader.use();
+		//waterShader.setVec3("viewpos", cam.camPos);
+		//waterShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
+		
 		// draw chunks within render distance in a spiral originating at the active chunk
 		// this ensures the central chunk will be loaded first (at least on startup)
 		spit.reset();
 		cache.pollInitRequests();
 		for (int i = 0; i < RENDER_VOLUME; i++) {
-			cache.draw(spit.getx() + activeChunk.x, spit.getz() + activeChunk.y);
+			cache.draw(spit.getx() + activeChunk.x, spit.getz() + activeChunk.y, chunkshader, waterShader);
 			spit.next();
 		}
-
-		// setup simple shader for objective drawing
-		//modelShader.use();
-		//modelShader.setVec3("viewpos", cam.camPos);
-		//modelShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
-		/*testShader.use();
-		testShader.setVec3("viewpos", cam.camPos);
-		testShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
-		obj.draw(deltatime, testShader);*/
-
-		// draw water table
-		waterShader.use();
-		waterShader.setVec3("viewpos", cam.camPos);
-		waterShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glBindVertexArray(waterVAO);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-		glDisable(GL_BLEND);
 
 		return 1;
 	}

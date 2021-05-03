@@ -111,7 +111,7 @@ public:
 	{
 		// compute shared resources for chunk objects
 		Chunk::computeSharedResources();
-
+		
 		// allocate cache matrix
 		cache.reserve(CACHE_VOLUME);
 		for (int y = 0; y < DIM; y++) {
@@ -184,7 +184,7 @@ public:
 
 	// draw chunk at specified chunk coordinate
 	// Appropriate shader must be setup prior to calling this method
-	void draw(int chunkx, int chunkz) {
+	void draw(int chunkx, int chunkz, Shader& terrainShader, Shader& waterShader) {
 		int distx = chunkx - refx;					// compute distance from reference point in chunk space
 		int distz = chunkz - refz;
 		if (distx < -1 || distx > DIM || distz < -1 || distz > DIM) {
@@ -217,7 +217,7 @@ public:
 		}
 		CachedChunk& cc = cache[index(index_x, index_z)];
 		if (cc.status == CACHESTATUS::VALID) {						// draw valid cached chunk
-			cc.chunk.draw();
+			cc.chunk.draw(/*terrainShader, waterShader*/);
 		}
 		else if (cc.status == CACHESTATUS::INVALID) {				// request this chunk to be loaded into cache, then fail the draw gracefully
 			cc.status = CACHESTATUS::QUEUED;						// this way the chunk will be drawn when it is ready without causing massive lag and frame drops
