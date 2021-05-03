@@ -83,7 +83,7 @@ private:
 			static GLInitRequest glr;
 			if (loadQueue.empty()) std::this_thread::sleep_for(POLL_DELAY);	// poll after delay for efficiency - maybe use condition variable instead of poll delay to avoid busy waiting?
 			else {
-				printf("generating chunk [%d, %d]\n", loadQueue.front().chunkx, loadQueue.front().chunkz);
+				//printf("generating chunk [%d, %d]\n", loadQueue.front().chunkx, loadQueue.front().chunkz);
 				loadQueue.front().chunk->chunk = Chunk(loadQueue.front().chunkx, loadQueue.front().chunkz);	// load requested chunk
 				glr.chunk = loadQueue.front().chunk;
 				initQueue.push(glr);																		// create gl init request

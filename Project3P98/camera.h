@@ -228,26 +228,22 @@ public:
         }
 
         if (oldYaw <= 45 && yaw >= 45) {
-            printf("TEST\n");
             upOffsetX *= -1;
             upOffsetZ *= -1;
             swap = !swap;
         }
         if (yaw <= 45 && oldYaw >= 45) {
-            printf("TEST2\n");
             upOffsetX *= -1;
             upOffsetZ *= -1;
             swap = !swap;
         }
 
         if (oldYaw <= 225 && yaw >= 225) {
-            printf("TEST3\n");
             upOffsetX *= -1;
             upOffsetZ *= -1;
             swap = !swap;
         }
         if (yaw <= 225 && oldYaw >= 225) {
-            printf("TEST4\n");
             upOffsetX *= -1;
             upOffsetZ *= -1;
             swap = !swap;
@@ -280,7 +276,7 @@ public:
 
         yaw += xoffset;
         pitch += yoffset;
-        printf("Yaw:%f\n",yaw);
+
         if (oldYaw <= 45 && yaw >= 45) {
             upOffsetX *= -1;
             upOffsetZ *= -1;
