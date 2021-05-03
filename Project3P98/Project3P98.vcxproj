@@ -152,7 +152,7 @@
     <ClInclude Include="chunk.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="shader.h" />
-    <ClInclude Include="testcamera.h" />
+    <ClInclude Include="camera.h" />
     <ClInclude Include="world.h" />
   </ItemGroup>
   <ItemGroup>

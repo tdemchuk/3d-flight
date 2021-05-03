@@ -8,7 +8,7 @@
 	@date 02.12.2021
 */
 
-#include "testcamera.h"
+#include "camera.h"
 #include "cache.h"
 #include "shader.h"
 #include <glm/glm.hpp>
@@ -51,7 +51,7 @@ private:
 	}
 
 	// instance data
-	TestCamera&		cam;								// camera object - represents player position, direction, view
+	Camera&			cam;								// camera object - represents player position, direction, view
 	glm::vec2		activeChunk;						// coordinate of chunk that player position is within
 	Cache			cache;								// terrain cache
 	SpiralIterator	spit;
@@ -65,9 +65,9 @@ public:
 
 	// Constructor
 	World() = delete;
-	World(TestCamera& camera) :
+	World(Camera& camera) :
 		cam(camera),
-		activeChunk(mapchunk(cam.Position.x), mapchunk(cam.Position.z)),
+		activeChunk(mapchunk(cam.camPos.x), mapchunk(cam.camPos.z)),
 		cache(activeChunk.x - Cache::dim()/2, activeChunk.y - Cache::dim()/2),
 		spit(),
 		chunkshader("shaders/chunkshader.vs", "shaders/chunkshader.fs"),
@@ -131,12 +131,12 @@ public:
 	void update(double deltatime) {
 
 		// compute active chunk coords
-		activeChunk.x = mapchunk(cam.Position.x);
-		activeChunk.y = mapchunk(cam.Position.z);
+		activeChunk.x = mapchunk(cam.camPos.x);
+		activeChunk.y = mapchunk(cam.camPos.z);
 
 		// setup chunk shader for drawing
 		chunkshader.use();
-		chunkshader.setVec3("viewpos", cam.Position);
+		chunkshader.setVec3("viewpos", cam.camPos);
 		chunkshader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
 		glBindTexture(GL_TEXTURE_2D, Chunk::texID());
 
@@ -151,7 +151,7 @@ public:
 
 		// draw water table
 		waterShader.use();
-		waterShader.setVec3("viewpos", cam.Position);
+		waterShader.setVec3("viewpos", cam.camPos);
 		waterShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
