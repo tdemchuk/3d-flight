@@ -176,7 +176,6 @@ public:
 		// compute active chunk coords
 		activeChunk.x = mapchunk(cam.camPos.x);
 		activeChunk.y = mapchunk(cam.camPos.z);
-		printf("Current height = %f\n", testHeight(cam.camPos.x, cam.camPos.z));
 		// setup chunk shader for drawing
 		chunkshader.use();
 		chunkshader.setVec3("viewpos", cam.camPos);

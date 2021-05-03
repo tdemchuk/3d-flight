@@ -150,6 +150,9 @@ int main(int argc, char* argv[]) {
 			pause_keyboard(window);
 		}
 
+		float curTerrain = w.testHeight(cam.camPos.x, cam.camPos.z);
+		float curDif = cam.camPos.y - curTerrain;
+
 		glfwSwapBuffers(window);				
 		glfwPollEvents();
 
@@ -157,7 +160,11 @@ int main(int argc, char* argv[]) {
 			cam.camPos.y = 30;
 		}
 
-		if (cam.camPos.y < -10) {
+		if (curDif <= 10) {
+			score += 10.0 / (cam.camPos.y - curTerrain);
+		}
+
+		if (cam.camPos.y <= curTerrain) {
 			end = true;
 			printf("TOO LOW, YOU LOSE! PRESS ESCAPE TO EXIT!\n");
 			while (end) {
