@@ -2,7 +2,7 @@
 	COSC 3P98 - Term Project
 	@author Tennyson Demchuk | 6190532 | td16qg@brocku.ca
 	@author Daniel Sokic | 6164545 | ds16sz@brocku.ca
-	@author 
+	@author Aditya Rajyaguru | 6582282 | ar18xp@brocku.ca
 	@date 02.08.2021
 */
 
@@ -47,6 +47,8 @@ unsigned int width, height;
 float deltatime = 0;
 float lastframe = 0;
 float FPS = 0;
+
+int score = 0;
 
 Camera cam((float)width/(float)height, glm::vec3(0, 30, 0));
 
@@ -99,114 +101,6 @@ int main(int argc, char* argv[]) {
 	glEnable(GL_DEPTH_TEST);		// enable depth testing
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
-	// init shader
-	//Shader shader("shaders/basic.vs", "shaders/basic.fs");
-	//Shader chunkshader("shaders/chunkshader.vs","shaders/chunkshader.fs");
-
-	// init terrain
-	//Chunk chunk1, chunk2(1, 1);
-	//Chunk chunk3(1, -1);
-	//Chunk chunk4(-1, 0);
-	//Cache cache(-1, -1);
-	//TerrainChunk tc(64);			// make sure to init AFTER GLFW
-	//tc.applyRandomHeightmap();
-	//tc.applySinusoidalHeightmap();
-	//tc.computeFaceNormals();						// mathematically "correct" method is broken atm, use approximation 
-	//tc.computeAngleWeightedSmoothNormals();
-	//tc.computeSmoothNormalsApproximation();
-	//tc.uploadVertexData();							// call whenever vertex data is changed
-
-	// init test cube
-	/*
-	glm::mat4 cube_model = glm::mat4(1.0f);
-	cube_model = glm::translate(glm::rotate(glm::scale(cube_model, glm::vec3(2, 2, 2)),glm::radians(15.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(0.0f, 2.0f, 0.0f));
-	float cube_vertices[] = {
-	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-
-	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-	 0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-
-	-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-
-	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-
-	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-	 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-
-	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-	 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
-	};
-	
-	// init cube VAO's, VBO's, EBO's
-	unsigned int cubeVBO, cubeVAO;
-	glGenVertexArrays(1, &cubeVAO);
-	glGenBuffers(1, &cubeVBO);
-
-	glBindVertexArray(cubeVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
-
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);	// unbind (legal but not necessary)
-
-	// setup perspective projection
-	glm::mat4 view = glm::mat4(1.0f);
-	glm::vec3 viewpos(0, 5, 17);					// inverse of view matrix translation
-	view = glm::translate(glm::rotate(view, glm::radians(10.0f), glm::vec3(1.0, 0, 0)), glm::vec3(0, -5, -17));		// translate the scene in the reverse direction of the way we want to move
-	glm::mat4 proj = glm::perspective(glm::radians(cam.Zoom), (float)width/(float)height, 0.1f, 1000.0f);
-	glm::mat3 norm;									// normal matrix - https://www.lighthouse3d.com/tutorials/glsl-12-tutorial/the-normal-matrix/
-	shader.use();
-	shader.setMat4("proj", proj);
-
-	// setup lighting
-	glm::vec3 lightpos(0.0f, 2.0f, 0.0f);		// 2 units above the origin
-	shader.setVec3("lightcolor", 1.0f, 1.0f, 1.0f);
-	shader.setVec3("lightpos", lightpos);
-
-	// setup shader values
-	chunkshader.use();
-	glm::vec3 sunPosition = glm::vec3(14, 2, 22);
-	const glm::vec3 origin(0.0f);
-	glm::vec3 lightdir = glm::normalize(origin - sunPosition);
-	chunkshader.setVec3("objcolor", chunk_color);					// <-- temp, unnecessary once textures are added
-	chunkshader.setVec3("dlight.direction", lightdir);
-	chunkshader.setVec3("dlight.ambient", 0.2f, 0.2f, 0.2f);
-	chunkshader.setVec3("dlight.diffuse", 0.5f, 0.5f, 0.5f);
-	chunkshader.setVec3("dlight.specular", 0.2f, 0.2f, 0.2f);
-	*/
-	
-	//cam.renderDist = 1000.0f;
-	//cam.redefineProjectionMatrix((float)width/(float)height);
 	World w(cam);
 
 	// FPS calculation via simple moving average - https://stackoverflow.com/a/87732
@@ -219,7 +113,7 @@ int main(int argc, char* argv[]) {
 
 	printf("CONTROLS:\nLEFT SHIFT:Thrust Forward\nP:Pause \nU:Unpause\nW:Pitch Up\nS:Pitch Down\nA:Yaw Left\nD:Yaw Right\nQ:Roll Left\nE:Roll Right\n");
 	printf("PRESS THE LEFT SHIFT KEY TO START!\n");
-
+	std::cout << score << "\n";
 	// render loop
 	while (!glfwWindowShouldClose(window)) {	
 										// time logic
@@ -251,24 +145,12 @@ int main(int argc, char* argv[]) {
 		if(pause) {
 			pause_keyboard(window);
 		}
-		/*
-		shader.use();		// use basic shader
-		view = cam.GetViewMatrix();
-		viewpos = cam.camPos;
-		shader.setMat4("view", view);
-		shader.setVec3("viewpos", viewpos);
-
-		glBindVertexArray(cubeVAO);		// draw cube
-		norm = glm::mat3(glm::transpose(glm::inverse(cube_model)));
-		shader.setMat3("normalMatrix", norm);
-		shader.setMat4("model", cube_model);
-		shader.setVec3("objcolor", 1.0f, 1.0f, 1.0f);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		*/
 
 		glfwSwapBuffers(window);				
 		glfwPollEvents();
 
+		std::cout << "\x1b[A";
+		std::cout << "Score: " << score << "\n";
 		if (cam.camPos.y > 30) {
 			cam.camPos.y = 30;
 		}
@@ -283,10 +165,7 @@ int main(int argc, char* argv[]) {
 		}
 
 	}
-
 	// perform cleanup and exit
-	//glDeleteVertexArrays(1, &cubeVAO);
-	//glDeleteBuffers(1, &cubeVBO);
 	glfwTerminate();
 	return 0;
 }
