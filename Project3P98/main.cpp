@@ -18,6 +18,7 @@
 */
 
 #include "world.h"
+#include "models.h"
 #include "shader.h"			// shader loading library - https://learnopengl.com/code_viewer_gh.php?code=includes/learnopengl/shader.h
 #include "camera.h"		    // camera - MUST BE REPLACED W/ CUSTOM FLIGHTSIM CAM USING QUATERNIONS
 #include <glm/glm.hpp>		// GLM - https://glm.g-truc.net/0.9.9/index.html
@@ -97,23 +98,6 @@ int main(int argc, char* argv[]) {
 	// enable gl options
 	glEnable(GL_DEPTH_TEST);		// enable depth testing
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-	// init shader
-	//Shader shader("shaders/basic.vs", "shaders/basic.fs");
-	//Shader chunkshader("shaders/chunkshader.vs","shaders/chunkshader.fs");
-
-	// init terrain
-	//Chunk chunk1, chunk2(1, 1);
-	//Chunk chunk3(1, -1);
-	//Chunk chunk4(-1, 0);
-	//Cache cache(-1, -1);
-	//TerrainChunk tc(64);			// make sure to init AFTER GLFW
-	//tc.applyRandomHeightmap();
-	//tc.applySinusoidalHeightmap();
-	//tc.computeFaceNormals();						// mathematically "correct" method is broken atm, use approximation 
-	//tc.computeAngleWeightedSmoothNormals();
-	//tc.computeSmoothNormalsApproximation();
-	//tc.uploadVertexData();							// call whenever vertex data is changed
 
 	// init test cube
 	/*
@@ -206,6 +190,7 @@ int main(int argc, char* argv[]) {
 	
 	//cam.renderDist = 1000.0f;
 	//cam.redefineProjectionMatrix((float)width/(float)height);
+
 	World w(cam);
 
 	// FPS calculation via simple moving average - https://stackoverflow.com/a/87732
@@ -232,7 +217,6 @@ int main(int argc, char* argv[]) {
 		FPS = (float)SAMPLES / fpsSum;			// compute # frame samples / total time (in seconds)
 		frameIndex = (frameIndex + 1) % SAMPLES;
 
-
 		glClearColor(0.443f, 0.560f, 0.756f, 1.0f);	// RGBA
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -246,25 +230,13 @@ int main(int argc, char* argv[]) {
 			cam.applyGravity(deltatime);
 		}
 		if(pause) {
+			glfwSetCursorPosCallback(window, nullptr);
+			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			pause_keyboard(window);
 		}
 		if (!start) {
 			start_keyboard(window);
 		}
-		/*
-		shader.use();		// use basic shader
-		view = cam.GetViewMatrix();
-		viewpos = cam.camPos;
-		shader.setMat4("view", view);
-		shader.setVec3("viewpos", viewpos);
-
-		glBindVertexArray(cubeVAO);		// draw cube
-		norm = glm::mat3(glm::transpose(glm::inverse(cube_model)));
-		shader.setMat3("normalMatrix", norm);
-		shader.setMat4("model", cube_model);
-		shader.setVec3("objcolor", 1.0f, 1.0f, 1.0f);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		*/
 
 		glfwSwapBuffers(window);				
 		glfwPollEvents();
@@ -340,6 +312,8 @@ void end_keyboard(GLFWwindow* window) {
 void pause_keyboard(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		pause = false;
+		glfwSetCursorPosCallback(window, mouse_callback);
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		printf("GAME UNPAUSED!\n");
 	}
 }

@@ -53,6 +53,9 @@
     <ClInclude Include="aliases.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="models.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\basic.fs">
@@ -68,6 +71,12 @@
       <Filter>Source Files\shaders</Filter>
     </None>
     <None Include="shaders\basicwatershader.fs">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\test.fs">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\test.vs">
       <Filter>Source Files\shaders</Filter>
     </None>
   </ItemGroup>

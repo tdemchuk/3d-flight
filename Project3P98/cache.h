@@ -83,7 +83,7 @@ private:
 			static GLInitRequest glr;
 			if (loadQueue.empty()) std::this_thread::sleep_for(POLL_DELAY);	// poll after delay for efficiency - maybe use condition variable instead of poll delay to avoid busy waiting?
 			else {
-				printf("generating chunk [%d, %d]\n", loadQueue.front().chunkx, loadQueue.front().chunkz);
+				//printf("generating chunk [%d, %d]\n", loadQueue.front().chunkx, loadQueue.front().chunkz);
 				loadQueue.front().chunk->chunk = Chunk(loadQueue.front().chunkx, loadQueue.front().chunkz);	// load requested chunk
 				glr.chunk = loadQueue.front().chunk;
 				initQueue.push(glr);																		// create gl init request
@@ -171,6 +171,15 @@ public:
 			initQueue.front().chunk->status = CACHESTATUS::VALID;
 			initQueue.pop();
 		}
+	}
+
+	// gets approximate height at given world coordinate and containing chunk coordinate
+	float getHeight(int cx, int cz, float wx, float wy) {
+		int distx = cx - refx;					// compute distance from reference point in chunk space
+		int distz = cz - refz;
+		int index_x = wrap(domx + distx);		// compute corresponding cache matrix index as distance from domain boundaries
+		int index_z = wrap(domz + distz);
+		return cache[index(index_x, index_z)].chunk.getHeight(wx, wy);	// use cache coordinates to find containing chunk for test point and return approx height at that world coordinate
 	}
 
 	// draw chunk at specified chunk coordinate

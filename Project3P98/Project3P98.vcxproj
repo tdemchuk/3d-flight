@@ -150,6 +150,7 @@
   <ItemGroup>
     <ClInclude Include="cache.h" />
     <ClInclude Include="chunk.h" />
+    <ClInclude Include="models.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="camera.h" />
@@ -163,6 +164,8 @@
     <None Include="shaders\basicwatershader.fs" />
     <None Include="shaders\chunkshader.fs" />
     <None Include="shaders\chunkshader.vs" />
+    <None Include="shaders\test.fs" />
+    <None Include="shaders\test.vs" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\grass.jpg" />

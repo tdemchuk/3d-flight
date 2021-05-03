@@ -5,9 +5,12 @@
 	World Class
 	Contains scene information, player data, camera object, manages physics, lighting, etc...
 	@author Tennyson Demchuk
+	@author Daniel Sokic
+	@author Aditya Rajyaguru
 	@date 02.12.2021
 */
 
+#include "models.h"
 #include "texture.h"
 #include "camera.h"
 #include "cache.h"
@@ -58,10 +61,14 @@ private:
 	SpiralIterator	spit;
 	Shader			chunkshader;						// shader programs used in world
 	Shader			waterShader;
+	Shader			modelShader;
+	Shader			testShader;
 	glm::vec3		sunPosition;						// position of the sun in the world - directional light
 	Texture			grasstex;							// textures used in terrain
 	Texture			sandtex;
 	Texture			stonetex;
+	glm::vec3		objspawn;
+	Objective		obj;
 
 	unsigned int waterVAO, waterVBO, waterEBO;
 
@@ -72,21 +79,25 @@ public:
 	World(Camera& camera) :
 		cam(camera),
 		activeChunk(mapchunk(cam.camPos.x), mapchunk(cam.camPos.z)),
-		cache(activeChunk.x - Cache::dim()/2, activeChunk.y - Cache::dim()/2),
+		cache(activeChunk.x - Cache::dim() / 2, activeChunk.y - Cache::dim() / 2),
 		spit(),
 		chunkshader("shaders/chunkshader.vs", "shaders/chunkshader.fs"),
 		waterShader("shaders/basic.vs", "shaders/basicwatershader.fs"),
-		origin(0.0f)
+		modelShader("shaders/basic.vs", "shaders/basic.fs"),
+		testShader("shaders/test.vs","shaders/test.fs"),
+		origin(0.0f),
+		objspawn(0,60,0),
+		obj(objspawn)
 	{
 		// load and generate terrain textures
 		grasstex.load("textures/grass_top.png");
 		sandtex.load("textures/sand.png");
 		stonetex.load("textures/stone.png");
 
-		// setup shader values
+		// setup chunkshader
 		chunkshader.use();
 		chunkshader.setInt("grasstex", 0);				// upload multiple textures to shader - https://stackoverflow.com/a/25252981
-		chunkshader.setInt("sandtex", 1);
+		chunkshader.setInt("sandtex", 1);				// using minecraft textures, all credit to mojang
 		chunkshader.setInt("stonetex", 2);
 		sunPosition = glm::vec3(14, 60, 22);
 		glm::vec3 lightdir = glm::normalize(origin - sunPosition);
@@ -95,8 +106,7 @@ public:
 		chunkshader.setVec3("dlight.diffuse", 0.5f, 0.5f, 0.5f);
 		chunkshader.setVec3("dlight.specular", 0.2f, 0.2f, 0.2f);
 
-		// bind multiple textures for rendering - https://stackoverflow.com/a/25252981
-		// MAY NEED TO MOVE TO UPDATE LOOP
+		// bind multiple textures for rendering terrain
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, grasstex.id);
 		glActiveTexture(GL_TEXTURE1);
@@ -105,10 +115,17 @@ public:
 		glBindTexture(GL_TEXTURE_2D, stonetex.id);
 
 		waterShader.use();
+		waterShader.setMat4("modelMatrix", glm::mat4(1.0));
 		waterShader.setVec3("dlight.direction", lightdir);
 		waterShader.setVec3("dlight.ambient", 0.2f, 0.2f, 0.2f);
 		waterShader.setVec3("dlight.diffuse", 0.5f, 0.5f, 0.5f);
 		waterShader.setVec3("dlight.specular", 0.2f, 0.2f, 0.2f);
+
+		modelShader.use();
+		modelShader.setVec3("dlight.direction", lightdir);
+		modelShader.setVec3("dlight.ambient", 0.2f, 0.2f, 0.2f);
+		modelShader.setVec3("dlight.diffuse", 0.5f, 0.5f, 0.5f);
+		modelShader.setVec3("dlight.specular", 0.2f, 0.2f, 0.2f);
 
 
 		// setup water table plane - for demo purposes - make part of chunk eventually
@@ -140,6 +157,11 @@ public:
 		glBindVertexArray(0);
 	}
 
+	// returns the height of the terrain at the given world coordinate
+	inline float testHeight(float x, float y) {
+		return cache.getHeight(mapchunk(x), mapchunk(y), x, y);
+	}
+
 	// destructor
 	~World() {
 		glDeleteVertexArrays(1, &waterVAO);
@@ -154,7 +176,7 @@ public:
 		// compute active chunk coords
 		activeChunk.x = mapchunk(cam.camPos.x);
 		activeChunk.y = mapchunk(cam.camPos.z);
-
+		printf("Current height = %f\n", testHeight(cam.camPos.x, cam.camPos.z));
 		// setup chunk shader for drawing
 		chunkshader.use();
 		chunkshader.setVec3("viewpos", cam.camPos);
@@ -168,6 +190,15 @@ public:
 			cache.draw(spit.getx() + activeChunk.x, spit.getz() + activeChunk.y);
 			spit.next();
 		}
+
+		// setup simple shader for objective drawing
+		//modelShader.use();
+		//modelShader.setVec3("viewpos", cam.camPos);
+		//modelShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
+		/*testShader.use();
+		testShader.setVec3("viewpos", cam.camPos);
+		testShader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
+		obj.draw(deltatime, testShader);*/
 
 		// draw water table
 		waterShader.use();

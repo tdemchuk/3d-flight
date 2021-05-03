@@ -168,6 +168,8 @@ private:
 	float* vertex;					// vertex positions
 	float* mesh;					// vertex, normal, and texture data for terrain chunk to be uploaded to GPU
 	unsigned int vao, vbo;			// GL vertex array, buffer object ID's
+	float worldx;					// corresponding world coordinate for the lower leftmost vertex of this chunk
+	float worldz;
 
 	// give cache class private access
 	friend class Cache;		
@@ -196,9 +198,9 @@ public:
 		vertex = new float[vertexElements()];
 
 		// transform chunk coord to world coords - points to centre of chunk
-		float worldx = (float)(int)(CHUNK_WIDTH * chunkcoordx);
-		float worldz = (float)(int)(CHUNK_WIDTH * chunkcoordz);
-		worldx -= boundaryOffset();								// transform coords to point to lower leftmost vertex of chunk
+		worldx = (float)(int)(CHUNK_WIDTH * chunkcoordx);
+		worldz = (float)(int)(CHUNK_WIDTH * chunkcoordz);
+		worldx -= boundaryOffset();		// transform coords to point to lower leftmost vertex of chunk
 		worldz -= boundaryOffset();
 
 		// generate mesh position data in parallel - 3 threads - TODO: move to thread pool eventually to improve performance
@@ -266,6 +268,21 @@ public:
 	// Move constructor
 	Chunk(Chunk&& other) noexcept : vao(0), vbo(0), vertex(), mesh() {
 		swap(*this, other);
+	}
+
+	// returns the y-value at the specified coordinate
+	float getHeight(float wx, float wz) {
+		// convert world coords to chunk mesh coords
+		float distx = (wx - worldx) / SCALE;	// dist from lower leftmost vertex in mesh (0,0)
+		float distz = (wz - worldz) / SCALE;
+		int index_x = (int)distx;
+		int index_z = (int)distz;
+		// use 4 nearest points to interpolate height of point
+		float h1 = height(mesh, index_x, index_z, wx, wz);
+		//float h2 = height(mesh, index_x+1, index_z, wx+SCALE, wz);
+		//float h3 = height(mesh, index_x, index_z+1, wx, wz+SCALE);
+		//float h4 = height(mesh, index_x+1, index_z+1, wx+SCALE, wz+SCALE);
+		return h1;
 	}
 
 	// returns width of one chunk in world space
