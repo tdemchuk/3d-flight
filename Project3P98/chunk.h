@@ -17,7 +17,6 @@
 /*
 	Simplified Terrain Chunk Class
 	One terrain chunk represents a square grid of terrain oriented along the horizontal XZ plane in world space
-	Using grass texture - http://texturelib.com/texture/?path=/Textures/grass/grass/grass_grass_0124
 	@author Tennyson Demchuk | 6190532 | td16qg@brocku.ca
 	@date 02.13.2021
 */
