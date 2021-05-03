@@ -109,7 +109,9 @@ public:
     }
 
     void applyGravity(float deltaTime) {
-        camPos.y = camPos.y - 0.04;
+        float pitchVelocity = PitchSpeed * deltaTime;
+        camPos.y -= 0.04;
+        Pitch -= pitchVelocity * 0.5;
     }
 
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
