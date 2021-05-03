@@ -239,17 +239,16 @@ int main(int argc, char* argv[]) {
 		// update and draw world
 		w.update(deltatime);
 
-		if (!pause && start) {
+		if (!pause) {
 			keyboard_input(window);			// get keyboard input
 
 			// update camera by applying gravity
-			cam.applyGravity(deltatime);
+			if (start) {
+				cam.applyGravity(deltatime);
+			}
 		}
 		if(pause) {
 			pause_keyboard(window);
-		}
-		if (!start) {
-			start_keyboard(window);
 		}
 		/*
 		shader.use();		// use basic shader
@@ -318,19 +317,18 @@ void keyboard_input(GLFWwindow* window) {		// not technically a "callback", rath
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) cam.processKeyControls(ROLLLEFT, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) cam.processKeyControls(ROLLRIGHT, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) cam.processKeyControls(ENDTHRUST, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) cam.processKeyControls(STARTTHRUST, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+		if (!start) {
+			start = true;
+			printf("GAME HAS STARTED!\n");
+		}
+		cam.processKeyControls(STARTTHRUST, deltatime);
+	}
 
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
 		printf("FPS: %.1f.\n", FPS);
 		printf("GAME PAUSED! PRESS U to unpause\n");
 		pause = true;
-	}
-}
-
-void start_keyboard(GLFWwindow* window) {		// not technically a "callback", rather is called every frame before game starts
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-		start = true;
-		printf("GAME HAS STARTED!\n");
 	}
 }
 
@@ -350,19 +348,21 @@ void pause_keyboard(GLFWwindow* window) {
 
 // runs when the mouse is moved - manuipulates camera control
 void mouse_callback(GLFWwindow* window, double x, double y) {
-	static bool firstmove = true;
-	static float lastx = width / 2.0f;
-	static float lasty = height / 2.0f;
-	if (firstmove) {
+	if (start && !pause) {
+		static bool firstmove = true;
+		static float lastx = width / 2.0f;
+		static float lasty = height / 2.0f;
+		if (firstmove) {
+			lastx = (float)x;
+			lasty = (float)y;
+			firstmove = false;
+		}
+		float xoffset = (float)x - lastx;
+		float yoffset = lasty - (float)y;		// y coord reversed
 		lastx = (float)x;
 		lasty = (float)y;
-		firstmove = false;
+		cam.processMouseControls(xoffset, yoffset);
 	}
-	float xoffset = (float)x - lastx;
-	float yoffset = lasty - (float)y;		// y coord reversed
-	lastx = (float)x;
-	lasty = (float)y;
-	cam.processMouseControls(xoffset, yoffset);
 }
 
 void window_resize_callback(GLFWwindow* window, int w, int h) {

@@ -106,7 +106,7 @@ public:
 
     void applyGravity(float deltaTime) {
         float pitchVelocity = PitchSpeed * deltaTime;
-        camPos.y -= 0.04;
+        camPos.y -= 0.02;
         pitch -= pitchVelocity * 0.5;
     }
 
@@ -140,7 +140,7 @@ public:
         if (direction == ENDTHRUST) {
             camPos += camForward * velocity * momentum;
             if (momentum > 0.0) {
-                momentum -= 0.0003;
+                momentum -= 0.001;
             }
         }
         if (direction == ROLLLEFT) {
