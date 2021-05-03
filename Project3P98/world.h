@@ -8,6 +8,7 @@
 	@date 02.12.2021
 */
 
+#include "texture.h"
 #include "camera.h"
 #include "cache.h"
 #include "shader.h"
@@ -58,6 +59,9 @@ private:
 	Shader			chunkshader;						// shader programs used in world
 	Shader			waterShader;
 	glm::vec3		sunPosition;						// position of the sun in the world - directional light
+	Texture			grasstex;							// textures used in terrain
+	Texture			sandtex;
+	Texture			stonetex;
 
 	unsigned int waterVAO, waterVBO, waterEBO;
 
@@ -74,14 +78,31 @@ public:
 		waterShader("shaders/basic.vs", "shaders/basicwatershader.fs"),
 		origin(0.0f)
 	{
+		// load and generate terrain textures
+		grasstex.load("textures/grass_top.png");
+		sandtex.load("textures/sand.png");
+		stonetex.load("textures/stone.png");
+
 		// setup shader values
 		chunkshader.use();
+		chunkshader.setInt("grasstex", 0);				// upload multiple textures to shader - https://stackoverflow.com/a/25252981
+		chunkshader.setInt("sandtex", 1);
+		chunkshader.setInt("stonetex", 2);
 		sunPosition = glm::vec3(14, 60, 22);
 		glm::vec3 lightdir = glm::normalize(origin - sunPosition);
 		chunkshader.setVec3("dlight.direction", lightdir);
 		chunkshader.setVec3("dlight.ambient", 0.2f, 0.2f, 0.2f);
 		chunkshader.setVec3("dlight.diffuse", 0.5f, 0.5f, 0.5f);
 		chunkshader.setVec3("dlight.specular", 0.2f, 0.2f, 0.2f);
+
+		// bind multiple textures for rendering - https://stackoverflow.com/a/25252981
+		// MAY NEED TO MOVE TO UPDATE LOOP
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, grasstex.id);
+		glActiveTexture(GL_TEXTURE1);
+		glBindTexture(GL_TEXTURE_2D, sandtex.id);
+		glActiveTexture(GL_TEXTURE2);
+		glBindTexture(GL_TEXTURE_2D, stonetex.id);
 
 		waterShader.use();
 		waterShader.setVec3("dlight.direction", lightdir);
@@ -138,7 +159,6 @@ public:
 		chunkshader.use();
 		chunkshader.setVec3("viewpos", cam.camPos);
 		chunkshader.setMat4("projectionViewMatrix", cam.proj * cam.GetViewMatrix());
-		glBindTexture(GL_TEXTURE_2D, Chunk::texID());
 
 		// draw chunks within render distance in a spiral originating at the active chunk
 		// this ensures the central chunk will be loaded first (at least on startup)

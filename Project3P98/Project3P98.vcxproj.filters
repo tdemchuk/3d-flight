@@ -47,6 +47,12 @@
     <ClInclude Include="camera.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="texture.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="aliases.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\basic.fs">

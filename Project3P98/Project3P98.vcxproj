@@ -153,6 +153,8 @@
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="camera.h" />
+    <ClInclude Include="texture.h" />
+    <ClInclude Include="aliases.h" />
     <ClInclude Include="world.h" />
   </ItemGroup>
   <ItemGroup>
