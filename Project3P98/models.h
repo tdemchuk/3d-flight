@@ -7,6 +7,14 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+/*
+	COSC 3P98 - Term Project
+	@author Tennyson Demchuk | 6190532 | td16qg@brocku.ca
+	@author Daniel Sokic | 6164545 | ds16sz@brocku.ca
+	@author Aditya Rajyaguru | 6582282 | ar18xp@brocku.ca
+	@date 05.03.2021
+*/
+
 static float objective_vertices[] = {
 	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
 	 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
@@ -96,8 +104,6 @@ public:
 				glm::radians(15.0f), glm::vec3(0.0f, 1.0f, 0.0f)),		// spin slowly around the y-axis
 			glm::vec3(0,100,0));
 		shader.setMat4("modelMatrix", model);
-		//shader.setFloat("spec_intensity", SPEC_INTENSITY);
-		//shader.setVec3("objcolor", 0.85f, 0.65f, 0.125f);		// goldenrod color
 		glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, numverts);
 	}

@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < SAMPLES; i++) fpsSamples[i] = 0;
 	float currentFrame;
 
-	printf("CONTROLS:\nLEFT SHIFT:Thrust Forward\nP:Pause \nU:Unpause\nW:Pitch Up\nS:Pitch Down\nA:Yaw Left\nD:Yaw Right\nQ:Roll Left\nE:Roll Right\n");
+	printf("CONTROLS:\n1:WireFrame Terrain\n2:Solid Terrain\nLEFT SHIFT:Thrust Forward\nP:Pause \nU:Unpause\nW:Pitch Up\nS:Pitch Down\nA:Yaw Left\nD:Yaw Right\nQ:Roll Left\nE:Roll Right\n");
 	printf("PRESS THE LEFT SHIFT KEY TO START!\n");
 
 	// render loop

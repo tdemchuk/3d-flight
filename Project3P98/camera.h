@@ -4,6 +4,14 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+/*
+    COSC 3P98 - Term Project
+    @author Tennyson Demchuk | 6190532 | td16qg@brocku.ca
+    @author Daniel Sokic | 6164545 | ds16sz@brocku.ca
+    @author Aditya Rajyaguru | 6582282 | ar18xp@brocku.ca
+    @date 05.03.2021
+*/
+
 // Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
 enum Camera_Movement {
     PITCHDOWN,
@@ -20,27 +28,13 @@ enum Camera_Movement {
 const float YAW = 0.0f;
 const float PITCH = 0.0f;
 const float ROLL = 1.0f;
-const float SPEED = 200.0f;                     // commercial jet speeds are around 150-250 m/s
+const float SPEED = 200.0f;
 const float PITCHSPEED = 50.0f;
 const float YAWSPEED = 100.0f;
 const float ROLLSPEED = 1.0f;
 const float SENSITIVITY = 0.1f;
 const float ZOOM = 45.0f;
 
-/*
-	First person camera class using the lookAt technique
-    ** SUGGESTED CONTROLS FOR PLANE FLIGHTSIM:
-    *   ENTER - Apply thrust (Move forward)
-    *   W - Tilt down
-    *   S - Tilt up
-    *   A - Tilt Left (roll cam left and gradually change yaw)
-    *   D - Tilt right
-    
-    ** Make Camera class owner of mouse and keyboard input handling functions
-    * 
-    * W - 
-    * 
-*/
 class Camera {
 public:
     // camera Attributes
@@ -104,6 +98,7 @@ public:
         return glm::lookAt(camPos, camPos + camForward, camUp);
     }
 
+    // Applies gravity to the camera
     void applyGravity(float deltaTime) {
         float pitchVelocity = PitchSpeed * deltaTime;
         camPos.y -= 0.02;
@@ -125,11 +120,9 @@ public:
             pitch -= pitchVelocity;
         if (direction == YAWLEFT) {
             yaw -= yawVelocity;
-            //printf("Yaw: %f", Yaw);
         }
         if (direction == YAWRIGHT) {
             yaw += yawVelocity;
-            //printf("Yaw: %f", Yaw);
         }
         if (direction == STARTTHRUST) {
             camPos += camForward * velocity * momentum;
@@ -144,7 +137,7 @@ public:
             }
         }
         if (direction == ROLLLEFT) {
-            if (!swap) {
+            if (!swap) {    //Normally rotate to left
                 if (upOffsetX > -0.3 && upOffsetZ > -0.3) {
                     if (upOffsetY > -1.0) {
                         upOffsetX -= rollVelocity;
@@ -162,7 +155,7 @@ public:
                     }
                 }
             }
-            else {
+            else {       //Reverse roll
                 if (upOffsetX < 0.3 && upOffsetZ < 0.3) {
                     if (upOffsetY > -1.0) {
                         upOffsetX += rollVelocity;
@@ -182,7 +175,7 @@ public:
             }
         }
         if (direction == ROLLRIGHT) {
-            if (!swap) {
+            if (!swap) {    //Normally roll to right
                 if (upOffsetX < 0.3 && upOffsetZ < 0.3) {
                     if (upOffsetY > -1.0) {
                         upOffsetX += rollVelocity;
@@ -200,7 +193,7 @@ public:
                     }
                 }
             }
-            else {
+            else {         //Reverse roll
                 if (upOffsetX > -0.3 && upOffsetZ > -0.3) {
                     if (upOffsetY > -1.0) {
                         upOffsetX -= rollVelocity;
@@ -220,6 +213,7 @@ public:
             }
         }
 
+        //Limit Yaw to be in range 0-360
         if (yaw > 360) {
             yaw = 0;
         }
@@ -227,6 +221,7 @@ public:
             yaw = 360;
         }
 
+        //These changes require the roll to swap to stay consistent
         if (oldYaw <= 45 && yaw >= 45) {
             upOffsetX *= -1;
             upOffsetZ *= -1;
@@ -249,11 +244,16 @@ public:
             swap = !swap;
         }
 
+        //Bound X offset for roll
         if (upOffsetX < -0.3) upOffsetX = -0.3;
-        if (upOffsetY < -5) upOffsetY = -5;
-        if (upOffsetZ < -0.3) upOffsetZ = -0.3;
         if (upOffsetX > 0.3) upOffsetX = 0.3;
+
+        //Bound Y offset for roll
+        if (upOffsetY < -5) upOffsetY = -5;
         if (upOffsetY > 5) upOffsetY = 5;
+
+        //Bound Z offset for roll
+        if (upOffsetZ < -0.3) upOffsetZ = -0.3;
         if (upOffsetZ > 0.3) upOffsetZ = 0.3;
 
         if (pitch > 89.0f)
@@ -262,6 +262,7 @@ public:
             pitch = -89.0f;
         updateCameraVectors();
 
+        //Update camera up based on offsets
         camUp.x += upOffsetX;
         camUp.y += upOffsetY;
         camUp.z += upOffsetZ;
@@ -277,6 +278,7 @@ public:
         yaw += xoffset;
         pitch += yoffset;
 
+        //These changes require the roll to swap to stay consistent
         if (oldYaw <= 45 && yaw >= 45) {
             upOffsetX *= -1;
             upOffsetZ *= -1;
@@ -299,12 +301,19 @@ public:
             swap = !swap;
         }
 
+        //Bound X offset for roll
         if (upOffsetX < -0.3) upOffsetX = -0.3;
-        if (upOffsetY < -5) upOffsetY = -5;
-        if (upOffsetZ < -0.3) upOffsetZ = -0.3;
         if (upOffsetX > 0.3) upOffsetX = 0.3;
+
+        //Bound Y offset for roll
+        if (upOffsetY < -5) upOffsetY = -5;
         if (upOffsetY > 5) upOffsetY = 5;
+
+        //Bound Z offset for roll
+        if (upOffsetZ < -0.3) upOffsetZ = -0.3;
         if (upOffsetZ > 0.3) upOffsetZ = 0.3;
+
+        //Bound pitch to be straight up or straight down
         if (pitch > 89.0f)
             pitch = 89.0f;
         if (pitch < -89.0f)
@@ -312,6 +321,7 @@ public:
 
         updateCameraVectors();
 
+        //Update camera up based on offsets
         camUp.x += upOffsetX;
         camUp.y += upOffsetY;
         camUp.z += upOffsetZ;
