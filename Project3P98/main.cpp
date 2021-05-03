@@ -29,6 +29,9 @@
 							// system and event callbacks
 void terminateProgram();
 void keyboard_input(GLFWwindow* window);
+void start_keyboard(GLFWwindow* window);
+void end_keyboard(GLFWwindow* window);
+void pause_keyboard(GLFWwindow* window);
 //void mouse_callback(GLFWwindow* window, double x, double y);
 void window_resize_callback(GLFWwindow* window, int w, int h);
 
@@ -43,6 +46,10 @@ float lastframe = 0;
 float FPS = 0;
 
 Camera cam((float)width/(float)height, glm::vec3(0, 50, 0));
+
+bool start = false;
+bool end = false;
+bool pause = false;
 
 
 // initializes GLAD and loads OpenGL function pointers
@@ -206,6 +213,9 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < SAMPLES; i++) fpsSamples[i] = 0;
 	float currentFrame;
 
+	printf("CONTROLS:\nLEFT SHIFT:Thrust Forward\nP:Pause \nU:Unpause\nW:Pitch Up\nS:Pitch Down\nA:Yaw Left\nD:Yaw Right\nQ:Roll Left\nE:Roll Right\n");
+	printf("PRESS THE LEFT SHIFT KEY TO START!\n");
+
 	// render loop
 	while (!glfwWindowShouldClose(window)) {	
 										// time logic
@@ -219,7 +229,6 @@ int main(int argc, char* argv[]) {
 		FPS = (float)SAMPLES / fpsSum;			// compute # frame samples / total time (in seconds)
 		frameIndex = (frameIndex + 1) % SAMPLES;
 
-		keyboard_input(window);			// get keyboard input
 
 		glClearColor(0.443f, 0.560f, 0.756f, 1.0f);	// RGBA
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -227,9 +236,18 @@ int main(int argc, char* argv[]) {
 		// update and draw world
 		w.update(deltatime);
 
-		// update camera by applying gravity
-		cam.applyGravity(deltatime);
+		if (!pause && start) {
+			keyboard_input(window);			// get keyboard input
 
+			// update camera by applying gravity
+			cam.applyGravity(deltatime);
+		}
+		if(pause) {
+			pause_keyboard(window);
+		}
+		if (!start) {
+			start_keyboard(window);
+		}
 		/*
 		shader.use();		// use basic shader
 		view = cam.GetViewMatrix();
@@ -247,6 +265,16 @@ int main(int argc, char* argv[]) {
 
 		glfwSwapBuffers(window);				
 		glfwPollEvents();
+
+		if (cam.camPos.y < -10) {
+			end = true;
+			printf("TOO LOW, YOU LOSE! PRESS ESCAPE TO EXIT!\n");
+			while (end) {
+				end_keyboard(window);
+				glfwPollEvents();
+			}
+		}
+
 	}
 
 	// perform cleanup and exit
@@ -285,7 +313,32 @@ void keyboard_input(GLFWwindow* window) {		// not technically a "callback", rath
 	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) cam.ProcessKeyboard(ENDTHRUST, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) cam.ProcessKeyboard(STARTTHRUST, deltatime);
 
-	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) printf("FPS: %.1f.\n", FPS);
+	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
+		printf("FPS: %.1f.\n", FPS);
+		printf("GAME PAUSED! PRESS U to unpause\n");
+		pause = true;
+	}
+}
+
+void start_keyboard(GLFWwindow* window) {		// not technically a "callback", rather is called every frame before game starts
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+		start = true;
+		printf("GAME HAS STARTED!\n");
+	}
+}
+
+void end_keyboard(GLFWwindow* window) {
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+		end = false;
+		glfwSetWindowShouldClose(window, true);
+	}
+}
+
+void pause_keyboard(GLFWwindow* window) {
+	if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+		pause = false;
+		printf("GAME UNPAUSED!\n");
+	}
 }
 
 /*void mouse_callback(GLFWwindow* window, double x, double y) {
