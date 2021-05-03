@@ -131,10 +131,7 @@ int main(int argc, char* argv[]) {
 
 		glClearColor(0.443f, 0.560f, 0.756f, 1.0f);	// RGBA
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		// update and draw world
-		if (!w.update(deltatime)) break;
-
+		w.update(deltatime);
 		if (!pause) {
 			keyboard_input(window);			// get keyboard input
 
