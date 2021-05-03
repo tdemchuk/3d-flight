@@ -35,7 +35,7 @@
 
 
 // function prototypes
-							// system and event callbacks
+// system and event callbacks
 void terminateProgram();
 void keyboard_input(GLFWwindow* window);
 void start_keyboard(GLFWwindow* window);
@@ -50,6 +50,7 @@ void window_resize_callback(GLFWwindow* window, int w, int h);
 #define DEFAULT_HEIGHT 700
 unsigned int width, height;
 
+// Correction measure to ensure that the speed of our game stays consistent across platforms/CPU's
 float deltatime = 0;
 float lastframe = 0;
 float FPS = 0;
@@ -71,7 +72,13 @@ void initGLAD() {
 	}
 }
 
-// genarate window of custom dimensions
+/*
+	Creates a window for the game.
+
+	@param w An unsigned int containing the width of the window
+	@param h An unsigned int containing the height of the window
+	@return A GLFWwindow object
+*/
 GLFWwindow* createWindow(unsigned int w, unsigned int h) {
 	GLFWwindow* window = glfwCreateWindow(w, h, "COSC 3P98 Project", nullptr, nullptr);		// create window
 	if (window == NULL) {
@@ -120,13 +127,15 @@ int main(int argc, char* argv[]) {
 
 	printf("CONTROLS:\nLEFT SHIFT:Thrust Forward\nP:Pause \nU:Unpause\nW:Pitch Up\nS:Pitch Down\nA:Yaw Left\nD:Yaw Right\nQ:Roll Left\nE:Roll Right\n");
 	printf("PRESS THE LEFT SHIFT KEY TO START!\n");
+
 	// render loop
 	while (!glfwWindowShouldClose(window)) {	
-										// time logic
+		// time logic
 		currentFrame = (float)glfwGetTime();
 		deltatime = currentFrame - lastframe;
 		lastframe = currentFrame;
-										// compute FPS
+		
+		// compute FPS
 		fpsSum -= fpsSamples[frameIndex];
 		fpsSum += deltatime;
 		fpsSamples[frameIndex] = deltatime;
@@ -146,22 +155,27 @@ int main(int argc, char* argv[]) {
 				std::cout << "Score: " << score << "\n";
 			}
 		}
+
+		//If the game was paused, then allow the cursor to be seen again and pause the game.
 		if(pause) {
 			glfwSetCursorPosCallback(window, nullptr);
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			pause_keyboard(window);
 		}
 
+		//Find distance to terrain, also provides a form of collision detection
 		float curTerrain = w.testHeight(cam.camPos.x, cam.camPos.z);
 		float curDif = cam.camPos.y - curTerrain;
 
 		glfwSwapBuffers(window);				
 		glfwPollEvents();
 
+		//Enforce the camera will never go above 30 as max height.
 		if (cam.camPos.y > 30) {
 			cam.camPos.y = 30;
 		}
 
+		//If difference <= 0 then we have gone below the terrain, ending the game.
 		if (curDif <= 0) {
 			PlaySound(TEXT("crash.wav"), NULL, SND_FILENAME | SND_ASYNC);
 			end = true;
@@ -172,6 +186,7 @@ int main(int argc, char* argv[]) {
 			}
 		}
 
+		//If you're in the sweet spot then your score will increase
 		if (curDif <= 10 && curDif >= 1) {
 			score += 10.0 / (cam.camPos.y - curTerrain);
 		}
@@ -200,29 +215,35 @@ void terminateProgram() {
    *------------------*
 */// ***********************************
 
+/*
+	Handles keyboard input for the game.
+
+	@param window - A GLFWwindow pointer 
+*/
 void keyboard_input(GLFWwindow* window) {		// not technically a "callback", rather is called every frame
 												// system and render mode input
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, true);
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) glfwSetWindowShouldClose(window, true); // Close if escape is pressed
 	else if (glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);	// wireframe
 	else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);	// full
 
 	// controls
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) cam.processKeyControls(PITCHDOWN, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) cam.processKeyControls(PITCHDOWN, deltatime); 
 	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) cam.processKeyControls(PITCHUP, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) cam.processKeyControls(YAWLEFT, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) cam.processKeyControls(YAWRIGHT, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) cam.processKeyControls(ROLLLEFT, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) cam.processKeyControls(ROLLRIGHT, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) cam.processKeyControls(ENDTHRUST, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) cam.processKeyControls(ENDTHRUST, deltatime); // Slows thruster down
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) { //Accelerate forward by pressing shift
 		if (!start) {
 			start = true;
 			printf("GAME HAS STARTED!\n");
 			std::cout << "Score: " << score << "\n";
 		}
+		//Adjust camera's position accordingly.
 		cam.processKeyControls(STARTTHRUST, deltatime);
 	}
-
+	//Pause our game, and print out the last score.
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
 		printf("FPS: %.1f.\n", FPS);
 		printf("GAME PAUSED! PRESS U to unpause\n");
@@ -232,6 +253,7 @@ void keyboard_input(GLFWwindow* window) {		// not technically a "callback", rath
 	}
 }
 
+//Handles escape key which closes the game
 void end_keyboard(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		end = false;
@@ -239,6 +261,7 @@ void end_keyboard(GLFWwindow* window) {
 	}
 }
 
+//Handles pausing the game.
 void pause_keyboard(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		pause = false;
@@ -252,6 +275,7 @@ void pause_keyboard(GLFWwindow* window) {
 
 // runs when the mouse is moved - manuipulates camera control
 void mouse_callback(GLFWwindow* window, double x, double y) {
+	//As long as the game isn't paused and it's still going, the player can navigate with their mouse.
 	if (start && !pause) {
 		static bool firstmove = true;
 		static float lastx = width / 2.0f;
@@ -269,10 +293,9 @@ void mouse_callback(GLFWwindow* window, double x, double y) {
 	}
 }
 
+// Allows for resizing of the window
 void window_resize_callback(GLFWwindow* window, int w, int h) {
 	width = w;
 	height = h;
 	glViewport(0, 0, width, height);
 }
-
-// *************************************
