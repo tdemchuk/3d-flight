@@ -2,7 +2,7 @@
 	COSC 3P98 - Term Project
 	@author Tennyson Demchuk | 6190532 | td16qg@brocku.ca
 	@author Daniel Sokic | 6164545 | ds16sz@brocku.ca
-	@author 
+	@author Aditya Rajyaguru | 6582282 | ar18xp@brocku.ca
 	@date 02.08.2021
 */
 
@@ -49,7 +49,9 @@ float deltatime = 0;
 float lastframe = 0;
 float FPS = 0;
 
-Camera cam((float)width/(float)height, glm::vec3(0, 50, 0));
+int score = 0;
+
+Camera cam((float)width/(float)height, glm::vec3(0, 30, 0));
 
 bool start = false;
 bool end = false;
@@ -75,6 +77,7 @@ GLFWwindow* createWindow(unsigned int w, unsigned int h) {
 	glfwMakeContextCurrent(window);											// set focus																				
 	glfwSetFramebufferSizeCallback(window, window_resize_callback);			// bind resize callback
 	glfwSetCursorPosCallback(window, mouse_callback);						// bind mouse motion callback
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	return window;
 }
 
@@ -94,102 +97,11 @@ int main(int argc, char* argv[]) {
 
 	GLFWwindow* window = createWindow();		// Create OpenGL window
 	initGLAD();
+	glfwSetWindowPos(window, 700, 100);
 
 	// enable gl options
 	glEnable(GL_DEPTH_TEST);		// enable depth testing
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-	// init test cube
-	/*
-	glm::mat4 cube_model = glm::mat4(1.0f);
-	cube_model = glm::translate(glm::rotate(glm::scale(cube_model, glm::vec3(2, 2, 2)),glm::radians(15.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::vec3(0.0f, 2.0f, 0.0f));
-	float cube_vertices[] = {
-	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	 0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	 0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-
-	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-	 0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-	 0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f,  0.0f, 1.0f,
-
-	-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-	-0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-
-	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-	 0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-
-	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-	 0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-	 0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-	-0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-	-0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-
-	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-	 0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-	 0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-	-0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-	-0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
-	};
-	
-	// init cube VAO's, VBO's, EBO's
-	unsigned int cubeVBO, cubeVAO;
-	glGenVertexArrays(1, &cubeVAO);
-	glGenBuffers(1, &cubeVBO);
-
-	glBindVertexArray(cubeVAO);
-	glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(cube_vertices), cube_vertices, GL_STATIC_DRAW);
-
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);	// unbind (legal but not necessary)
-
-	// setup perspective projection
-	glm::mat4 view = glm::mat4(1.0f);
-	glm::vec3 viewpos(0, 5, 17);					// inverse of view matrix translation
-	view = glm::translate(glm::rotate(view, glm::radians(10.0f), glm::vec3(1.0, 0, 0)), glm::vec3(0, -5, -17));		// translate the scene in the reverse direction of the way we want to move
-	glm::mat4 proj = glm::perspective(glm::radians(cam.Zoom), (float)width/(float)height, 0.1f, 1000.0f);
-	glm::mat3 norm;									// normal matrix - https://www.lighthouse3d.com/tutorials/glsl-12-tutorial/the-normal-matrix/
-	shader.use();
-	shader.setMat4("proj", proj);
-
-	// setup lighting
-	glm::vec3 lightpos(0.0f, 2.0f, 0.0f);		// 2 units above the origin
-	shader.setVec3("lightcolor", 1.0f, 1.0f, 1.0f);
-	shader.setVec3("lightpos", lightpos);
-
-	// setup shader values
-	chunkshader.use();
-	glm::vec3 sunPosition = glm::vec3(14, 2, 22);
-	const glm::vec3 origin(0.0f);
-	glm::vec3 lightdir = glm::normalize(origin - sunPosition);
-	chunkshader.setVec3("objcolor", chunk_color);					// <-- temp, unnecessary once textures are added
-	chunkshader.setVec3("dlight.direction", lightdir);
-	chunkshader.setVec3("dlight.ambient", 0.2f, 0.2f, 0.2f);
-	chunkshader.setVec3("dlight.diffuse", 0.5f, 0.5f, 0.5f);
-	chunkshader.setVec3("dlight.specular", 0.2f, 0.2f, 0.2f);
-	*/
-	
-	//cam.renderDist = 1000.0f;
-	//cam.redefineProjectionMatrix((float)width/(float)height);
 
 	World w(cam);
 
@@ -203,7 +115,6 @@ int main(int argc, char* argv[]) {
 
 	printf("CONTROLS:\nLEFT SHIFT:Thrust Forward\nP:Pause \nU:Unpause\nW:Pitch Up\nS:Pitch Down\nA:Yaw Left\nD:Yaw Right\nQ:Roll Left\nE:Roll Right\n");
 	printf("PRESS THE LEFT SHIFT KEY TO START!\n");
-
 	// render loop
 	while (!glfwWindowShouldClose(window)) {	
 										// time logic
@@ -223,23 +134,28 @@ int main(int argc, char* argv[]) {
 		// update and draw world
 		w.update(deltatime);
 
-		if (!pause && start) {
+		if (!pause) {
 			keyboard_input(window);			// get keyboard input
 
 			// update camera by applying gravity
-			cam.applyGravity(deltatime);
+			if (start) {
+				cam.applyGravity(deltatime);
+				std::cout << "\x1b[A";
+				std::cout << "Score: " << score << "\n";
+			}
 		}
 		if(pause) {
 			glfwSetCursorPosCallback(window, nullptr);
 			glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			pause_keyboard(window);
 		}
-		if (!start) {
-			start_keyboard(window);
-		}
 
 		glfwSwapBuffers(window);				
 		glfwPollEvents();
+
+		if (cam.camPos.y > 30) {
+			cam.camPos.y = 30;
+		}
 
 		if (cam.camPos.y < -10) {
 			end = true;
@@ -251,10 +167,7 @@ int main(int argc, char* argv[]) {
 		}
 
 	}
-
 	// perform cleanup and exit
-	//glDeleteVertexArrays(1, &cubeVAO);
-	//glDeleteBuffers(1, &cubeVBO);
 	glfwTerminate();
 	return 0;
 }
@@ -286,19 +199,21 @@ void keyboard_input(GLFWwindow* window) {		// not technically a "callback", rath
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) cam.processKeyControls(ROLLLEFT, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) cam.processKeyControls(ROLLRIGHT, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) cam.processKeyControls(ENDTHRUST, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) cam.processKeyControls(STARTTHRUST, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
+		if (!start) {
+			start = true;
+			printf("GAME HAS STARTED!\n");
+			std::cout << "Score: " << score << "\n";
+		}
+		cam.processKeyControls(STARTTHRUST, deltatime);
+	}
 
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
 		printf("FPS: %.1f.\n", FPS);
 		printf("GAME PAUSED! PRESS U to unpause\n");
+		std::cout << "Score: " << score << "\n";
 		pause = true;
-	}
-}
-
-void start_keyboard(GLFWwindow* window) {		// not technically a "callback", rather is called every frame before game starts
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) {
-		start = true;
-		printf("GAME HAS STARTED!\n");
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
 }
 
@@ -315,24 +230,28 @@ void pause_keyboard(GLFWwindow* window) {
 		glfwSetCursorPosCallback(window, mouse_callback);
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		printf("GAME UNPAUSED!\n");
+		std::cout << "Score: " << score << "\n";
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	}
 }
 
 // runs when the mouse is moved - manuipulates camera control
 void mouse_callback(GLFWwindow* window, double x, double y) {
-	static bool firstmove = true;
-	static float lastx = width / 2.0f;
-	static float lasty = height / 2.0f;
-	if (firstmove) {
+	if (start && !pause) {
+		static bool firstmove = true;
+		static float lastx = width / 2.0f;
+		static float lasty = height / 2.0f;
+		if (firstmove) {
+			lastx = (float)x;
+			lasty = (float)y;
+			firstmove = false;
+		}
+		float xoffset = (float)x - lastx;
+		float yoffset = lasty - (float)y;		// y coord reversed
 		lastx = (float)x;
 		lasty = (float)y;
-		firstmove = false;
+		cam.processMouseControls(xoffset, yoffset);
 	}
-	float xoffset = (float)x - lastx;
-	float yoffset = lasty - (float)y;		// y coord reversed
-	lastx = (float)x;
-	lasty = (float)y;
-	cam.processMouseControls(xoffset, yoffset);
 }
 
 void window_resize_callback(GLFWwindow* window, int w, int h) {

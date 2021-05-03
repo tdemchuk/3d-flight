@@ -105,7 +105,9 @@ public:
     }
 
     void applyGravity(float deltaTime) {
-        camPos.y = camPos.y - 0.04;
+        float pitchVelocity = PitchSpeed * deltaTime;
+        camPos.y -= 0.02;
+        pitch -= (pitchVelocity * 0.5 + (pitch * 0.0001));
     }
 
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
@@ -138,7 +140,7 @@ public:
         if (direction == ENDTHRUST) {
             camPos += camForward * velocity * momentum;
             if (momentum > 0.0) {
-                momentum -= 0.0003;
+                momentum -= 0.001;
             }
         }
         if (direction == ROLLLEFT) {
@@ -270,15 +272,49 @@ public:
     {
         xoffset *= SENSITIVITY;
         yoffset *= SENSITIVITY;
+        float oldYaw = yaw;
 
         yaw += xoffset;
         pitch += yoffset;
+
+        if (oldYaw <= 45 && yaw >= 45) {
+            upOffsetX *= -1;
+            upOffsetZ *= -1;
+            swap = !swap;
+        }
+        if (yaw <= 45 && oldYaw >= 45) {
+            upOffsetX *= -1;
+            upOffsetZ *= -1;
+            swap = !swap;
+        }
+
+        if (oldYaw <= 225 && yaw >= 225) {
+            upOffsetX *= -1;
+            upOffsetZ *= -1;
+            swap = !swap;
+        }
+        if (yaw <= 225 && oldYaw >= 225) {
+            upOffsetX *= -1;
+            upOffsetZ *= -1;
+            swap = !swap;
+        }
+
+        if (upOffsetX < -0.3) upOffsetX = -0.3;
+        if (upOffsetY < -5) upOffsetY = -5;
+        if (upOffsetZ < -0.3) upOffsetZ = -0.3;
+        if (upOffsetX > 0.3) upOffsetX = 0.3;
+        if (upOffsetY > 5) upOffsetY = 5;
+        if (upOffsetZ > 0.3) upOffsetZ = 0.3;
         if (pitch > 89.0f)
             pitch = 89.0f;
         if (pitch < -89.0f)
             pitch = -89.0f;
 
         updateCameraVectors();
+
+        camUp.x += upOffsetX;
+        camUp.y += upOffsetY;
+        camUp.z += upOffsetZ;
     }
 
 private:
