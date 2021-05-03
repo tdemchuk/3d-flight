@@ -48,7 +48,7 @@ float deltatime = 0;
 float lastframe = 0;
 float FPS = 0;
 
-Camera cam((float)width/(float)height, glm::vec3(0, 50, 0));
+Camera cam((float)width/(float)height, glm::vec3(0, 30, 0));
 
 bool start = false;
 bool end = false;
@@ -268,6 +268,10 @@ int main(int argc, char* argv[]) {
 
 		glfwSwapBuffers(window);				
 		glfwPollEvents();
+
+		if (cam.camPos.y > 30) {
+			cam.camPos.y = 30;
+		}
 
 		if (cam.camPos.y < -10) {
 			end = true;
