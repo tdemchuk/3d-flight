@@ -96,6 +96,7 @@ int main(int argc, char* argv[]) {
 
 	GLFWwindow* window = createWindow();		// Create OpenGL window
 	initGLAD();
+	glfwSetWindowPos(window, 700, 100);
 
 	// enable gl options
 	glEnable(GL_DEPTH_TEST);		// enable depth testing
@@ -113,7 +114,6 @@ int main(int argc, char* argv[]) {
 
 	printf("CONTROLS:\nLEFT SHIFT:Thrust Forward\nP:Pause \nU:Unpause\nW:Pitch Up\nS:Pitch Down\nA:Yaw Left\nD:Yaw Right\nQ:Roll Left\nE:Roll Right\n");
 	printf("PRESS THE LEFT SHIFT KEY TO START!\n");
-	std::cout << score << "\n";
 	// render loop
 	while (!glfwWindowShouldClose(window)) {	
 										// time logic
@@ -140,6 +140,8 @@ int main(int argc, char* argv[]) {
 			// update camera by applying gravity
 			if (start) {
 				cam.applyGravity(deltatime);
+				std::cout << "\x1b[A";
+				std::cout << "Score: " << score << "\n";
 			}
 		}
 		if(pause) {
@@ -149,8 +151,6 @@ int main(int argc, char* argv[]) {
 		glfwSwapBuffers(window);				
 		glfwPollEvents();
 
-		std::cout << "\x1b[A";
-		std::cout << "Score: " << score << "\n";
 		if (cam.camPos.y > 30) {
 			cam.camPos.y = 30;
 		}
@@ -201,6 +201,7 @@ void keyboard_input(GLFWwindow* window) {		// not technically a "callback", rath
 		if (!start) {
 			start = true;
 			printf("GAME HAS STARTED!\n");
+			std::cout << "Score: " << score << "\n";
 		}
 		cam.processKeyControls(STARTTHRUST, deltatime);
 	}
@@ -208,6 +209,7 @@ void keyboard_input(GLFWwindow* window) {		// not technically a "callback", rath
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
 		printf("FPS: %.1f.\n", FPS);
 		printf("GAME PAUSED! PRESS U to unpause\n");
+		std::cout << "Score: " << score << "\n";
 		pause = true;
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
@@ -224,6 +226,7 @@ void pause_keyboard(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		pause = false;
 		printf("GAME UNPAUSED!\n");
+		std::cout << "Score: " << score << "\n";
 		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	}
 }
