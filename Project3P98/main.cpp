@@ -28,6 +28,10 @@
 #include <time.h>
 #include <iostream>
 #include <fstream>
+#include <windows.h>
+#include <mmsystem.h>
+#include <stdio.h>
+
 
 
 // function prototypes
@@ -159,6 +163,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		if (curDif <= 0) {
+			PlaySound(TEXT("crash.wav"), NULL, SND_FILENAME | SND_ASYNC);
 			end = true;
 			printf("TOO LOW, YOU LOSE! PRESS ESCAPE TO EXIT!\n");
 			while (end) {
