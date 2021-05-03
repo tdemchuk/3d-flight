@@ -27,6 +27,7 @@
 #include <GLFW/glfw3.h>		// For GLFW
 #include <time.h>
 #include <iostream>
+#include <fstream>
 
 
 // function prototypes
@@ -132,7 +133,7 @@ int main(int argc, char* argv[]) {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// update and draw world
-		w.update(deltatime);
+		if (!w.update(deltatime)) break;
 
 		if (!pause) {
 			keyboard_input(window);			// get keyboard input
@@ -167,6 +168,11 @@ int main(int argc, char* argv[]) {
 		}
 
 	}
+	// write score to scores text file
+	std::ofstream scorefile("Scores.txt", std::ios_base::app);
+	scorefile << "Score: " << score << '\n';
+	scorefile.close();
+
 	// perform cleanup and exit
 	glfwTerminate();
 	return 0;

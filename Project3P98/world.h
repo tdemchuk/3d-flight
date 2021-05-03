@@ -171,12 +171,18 @@ public:
 
 	// update world - perform physics updates, draw world within render distance, etc...
 	// - deltatime = time difference between current and previous frames [useful for physics]
-	void update(double deltatime) {
+	// returns status code
+	int update(double deltatime) {
 
 		// compute active chunk coords
 		activeChunk.x = mapchunk(cam.camPos.x);
 		activeChunk.y = mapchunk(cam.camPos.z);
-		printf("Current height = %f\n", testHeight(cam.camPos.x, cam.camPos.z));
+		
+		if (cam.camPos.y <= testHeight(cam.camPos.x, cam.camPos.z)) {
+			printf("YOU'VE CRASHED!!\n");
+			return 0;
+		}
+
 		// setup chunk shader for drawing
 		chunkshader.use();
 		chunkshader.setVec3("viewpos", cam.camPos);
@@ -209,6 +215,8 @@ public:
 		glBindVertexArray(waterVAO);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 		glDisable(GL_BLEND);
+
+		return 1;
 	}
 };
 
