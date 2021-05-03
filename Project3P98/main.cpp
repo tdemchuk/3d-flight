@@ -12,6 +12,9 @@
 	Basic setup taken from https://learnopengl.com/
 	Please read instructions.txt for basic setup checklist to ensure proper
 	execution of the project within Visual Studio
+
+	Must be executed in a 64 bit Windows Environment. Ensure config is set to
+	'x64 Debug' or 'x64 Release' if executing in IDE.
 */
 
 #include "world.h"
@@ -32,7 +35,7 @@ void keyboard_input(GLFWwindow* window);
 void start_keyboard(GLFWwindow* window);
 void end_keyboard(GLFWwindow* window);
 void pause_keyboard(GLFWwindow* window);
-//void mouse_callback(GLFWwindow* window, double x, double y);
+void mouse_callback(GLFWwindow* window, double x, double y);
 void window_resize_callback(GLFWwindow* window, int w, int h);
 
 
@@ -70,7 +73,7 @@ GLFWwindow* createWindow(unsigned int w, unsigned int h) {
 	width = w; height = h;
 	glfwMakeContextCurrent(window);											// set focus																				
 	glfwSetFramebufferSizeCallback(window, window_resize_callback);			// bind resize callback
-	//glfwSetCursorPosCallback(window, mouse_callback);						// bind mouse motion callback
+	glfwSetCursorPosCallback(window, mouse_callback);						// bind mouse motion callback
 	return window;
 }
 
@@ -304,14 +307,14 @@ void keyboard_input(GLFWwindow* window) {		// not technically a "callback", rath
 	else if (glfwGetKey(window, GLFW_KEY_2) == GLFW_PRESS) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);	// full
 
 	// controls
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) cam.ProcessKeyboard(PITCHDOWN, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) cam.ProcessKeyboard(PITCHUP, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) cam.ProcessKeyboard(YAWLEFT, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) cam.ProcessKeyboard(YAWRIGHT, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) cam.ProcessKeyboard(ROLLLEFT, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) cam.ProcessKeyboard(ROLLRIGHT, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) cam.ProcessKeyboard(ENDTHRUST, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) cam.ProcessKeyboard(STARTTHRUST, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) cam.processKeyControls(PITCHDOWN, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) cam.processKeyControls(PITCHUP, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) cam.processKeyControls(YAWLEFT, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) cam.processKeyControls(YAWRIGHT, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) cam.processKeyControls(ROLLLEFT, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) cam.processKeyControls(ROLLRIGHT, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) cam.processKeyControls(ENDTHRUST, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) cam.processKeyControls(STARTTHRUST, deltatime);
 
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) {
 		printf("FPS: %.1f.\n", FPS);
@@ -341,21 +344,22 @@ void pause_keyboard(GLFWwindow* window) {
 	}
 }
 
-/*void mouse_callback(GLFWwindow* window, double x, double y) {
-	static bool first = true;
+// runs when the mouse is moved - manuipulates camera control
+void mouse_callback(GLFWwindow* window, double x, double y) {
+	static bool firstmove = true;
 	static float lastx = width / 2.0f;
 	static float lasty = height / 2.0f;
-	if (first) {
+	if (firstmove) {
 		lastx = (float)x;
 		lasty = (float)y;
-		first = false;
+		firstmove = false;
 	}
 	float xoffset = (float)x - lastx;
 	float yoffset = lasty - (float)y;		// y coord reversed
 	lastx = (float)x;
 	lasty = (float)y;
-	//cam.ProcessMouseMovement(xoffset, yoffset);
-}*/
+	cam.processMouseControls(xoffset, yoffset);
+}
 
 void window_resize_callback(GLFWwindow* window, int w, int h) {
 	width = w;

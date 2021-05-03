@@ -1,8 +1,6 @@
 #ifndef CS3P98_TERRAIN_CHUNK_H
 #define CS3P98_TERRAIN_CHUNK_H
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 #include "shader.h"
 #include <glad/glad.h>		// OpenGL function pointers
 #include <glm/glm.hpp>
@@ -17,7 +15,6 @@
 /*
 	Simplified Terrain Chunk Class
 	One terrain chunk represents a square grid of terrain oriented along the horizontal XZ plane in world space
-	Using grass texture - http://texturelib.com/texture/?path=/Textures/grass/grass/grass_grass_0124
 	@author Tennyson Demchuk | 6190532 | td16qg@brocku.ca
 	@date 02.13.2021
 */
@@ -26,8 +23,8 @@ private:
 
 	// class constants
 	static constexpr int	STRIDE		= 8;							// stride for mesh data - # components per vertex [3 position, 3 normal, 2 tex]
-	static constexpr int	CHUNK_WIDTH = 256;							// chunk consumes a square width by width grid in world space - MAKE MULTIPLE OF 2 - Default 1000
-	static constexpr float  SCALE		= 2.0f;							// width of one cell in world space - SHOULD DIVIDE CHUNK_WIDTH EVENLY [LARGER = BETTER PERFORMANCE, WORSE DETAIL]
+	static constexpr int	CHUNK_WIDTH = 256;							// chunk consumes a square width by width grid in world space - MAKE POWER OF 2 - 1 => Default 1000
+	static constexpr float  SCALE		= 4.0f;							// width of one cell in world space - SHOULD DIVIDE CHUNK_WIDTH EVENLY [LARGER = BETTER PERFORMANCE & WORSE DETAIL]
 	static constexpr float	DENSITY		= 1.0f / SCALE;					// determines poly density in terrain chunk mesh - inversely proportional to cell scale (> 1 = smaller cells = more polys in mesh)
 	static constexpr int	DIM			= (int)(DENSITY * CHUNK_WIDTH);	// dimension of terrain grid in # quads
 	static constexpr int	VDIM		= DIM + 1;						// dimension of terrain grid in # vertices (celldim + 1)
@@ -36,8 +33,6 @@ private:
 	static constexpr float	FREQUENCY	= 0.003;//0.0005f;				// terrain variance scaling factor
 	static int*				chunk_index;								// index array for all chunk objects
 	static unsigned int		ebo;
-	static unsigned int		tex;
-
 
 	// compile time helper functions
 	static constexpr int numVertices() { return VDIM * VDIM; }
@@ -78,26 +73,6 @@ private:
 		}
 	}
 	static void computeSharedResources() {												// generate and link shared chunk data - call from main thread
-		// load and generate grass texture
-		int texwidth, texheight, texnumchannels;
-		unsigned char* img = stbi_load("textures/grass_top.png",&texwidth, &texheight, &texnumchannels, 0);
-		if (!img) {
-			printf("Chunk texture load failed.\n");
-			stbi_image_free(img);
-			exit(0);
-		}
-		glGenTextures(1, &tex);
-		glBindTexture(GL_TEXTURE_2D, tex);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, texwidth, texheight, 0, GL_RGBA, GL_UNSIGNED_BYTE, img);	// GL_RGBA if png, GL_RBG if jpeg
-		glGenerateMipmap(GL_TEXTURE_2D);
-		stbi_image_free(img);
-
 		// compute mesh element index array
 		initIndexArray();
 		glGenBuffers(1, &ebo);
@@ -298,10 +273,6 @@ public:
 		return CHUNK_WIDTH;
 	}
 
-	static unsigned int texID() {
-		return tex;
-	}
-
 	// draws this terrain chunk to the screen
 	// ensure to setup terrain shader beforehand
 	void draw() {
@@ -313,6 +284,5 @@ public:
 // Initialize static values
 int* Chunk::chunk_index = nullptr;
 unsigned int Chunk::ebo = 0;
-unsigned int Chunk::tex = 0;
 
 #endif

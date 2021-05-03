@@ -65,26 +65,6 @@ Terrain Generation:
         		print(str(a) + ", " + str(b) + ", " + str(c) + ", ", end='')
         		print(str(a) + ", " + str(d) + ", " + str(b) + ", ")
 
-Tips for efficiency:
-	- Preallocate whenever possible
-	- code with locality of reference, cache coherence in mind
-	- precompute whenever possible
-	- break large or repetitive computations into simpler parts
-
-Notes for potential improvements:
-	- camera class
-	- dynamically generate variable sized terrain chunks
-	- compute noise/ heightmap in vertex shader and apply to vertex
-	- compute face normals in geometry shader
-	- tile terrain chunks in "player" range (range = view distance)
-	- generate terrain in spiral from player - https://www.desmos.com/calculator/w9fetmljyf, must modify projection matrix far plane
-	- upload modelview projection matrix as uniform -> no need to create with each run of vertex shader
-
-Quaternions:
-	- q = r + ai + bj + ck
-	- q = quaternion
-	- r = real component (single value) between -1 and 1. When > 0 point is within hemisphere, when < -1 point is outside
-
 
 
 
