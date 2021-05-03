@@ -227,6 +227,9 @@ int main(int argc, char* argv[]) {
 		// update and draw world
 		w.update(deltatime);
 
+		// update camera by applying gravity
+		cam.applyGravity(deltatime);
+
 		/*
 		shader.use();		// use basic shader
 		view = cam.GetViewMatrix();
@@ -279,7 +282,8 @@ void keyboard_input(GLFWwindow* window) {		// not technically a "callback", rath
 	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) cam.ProcessKeyboard(YAWRIGHT, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) cam.ProcessKeyboard(ROLLLEFT, deltatime);
 	if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) cam.ProcessKeyboard(ROLLRIGHT, deltatime);
-	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) cam.ProcessKeyboard(THRUST, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_RELEASE) cam.ProcessKeyboard(ENDTHRUST, deltatime);
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) cam.ProcessKeyboard(STARTTHRUST, deltatime);
 
 	if (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS) printf("FPS: %.1f.\n", FPS);
 }

@@ -12,7 +12,8 @@ enum Camera_Movement {
     YAWRIGHT,
     ROLLLEFT,
     ROLLRIGHT,
-    THRUST,
+    STARTTHRUST,
+    ENDTHRUST,
 };
 
 // Default camera values
@@ -65,6 +66,7 @@ public:
     float upOffsetX;
     float upOffsetY;
     float upOffsetZ;
+    float momentum;
     // projection matrix
     glm::mat4 proj;                 // camera projection matrix
     float renderDist;               // render distance of this camera in world space (default 100.0)
@@ -90,6 +92,7 @@ public:
         upOffsetX = 0.0;
         upOffsetY = 0.0;
         upOffsetZ = 0.0;
+        momentum = 0.0;
         updateCameraVectors();
     }
 
@@ -103,6 +106,10 @@ public:
     glm::mat4 GetViewMatrix()
     {
         return glm::lookAt(camPos, camPos + camForward, camUp);
+    }
+
+    void applyGravity(float deltaTime) {
+        camPos.y = camPos.y - 0.04;
     }
 
     // processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
@@ -126,8 +133,18 @@ public:
             Yaw += yawVelocity;
             //printf("Yaw: %f", Yaw);
         }
-        if (direction == THRUST)
-            camPos += camForward * velocity;
+        if (direction == STARTTHRUST) {
+            camPos += camForward * velocity * momentum;
+            if (momentum < 1.0) {
+                momentum += 0.001;
+            }
+        }
+        if (direction == ENDTHRUST) {
+            camPos += camForward * velocity * momentum;
+            if (momentum > 0.0) {
+                momentum -= 0.0003;
+            }
+        }
         if (direction == ROLLLEFT) {
             if (!swap) {
                 if (upOffsetX > -0.3 && upOffsetZ > -0.3) {
