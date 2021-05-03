@@ -26,8 +26,8 @@ private:
 
 	// class constants
 	static constexpr int	STRIDE		= 8;							// stride for mesh data - # components per vertex [3 position, 3 normal, 2 tex]
-	static constexpr int	CHUNK_WIDTH = 256;							// chunk consumes a square width by width grid in world space - MAKE MULTIPLE OF 2 - Default 1000
-	static constexpr float  SCALE		= 2.0f;							// width of one cell in world space - SHOULD DIVIDE CHUNK_WIDTH EVENLY [LARGER = BETTER PERFORMANCE, WORSE DETAIL]
+	static constexpr int	CHUNK_WIDTH = 256;							// chunk consumes a square width by width grid in world space - MAKE POWER OF 2 - 1 => Default 1000
+	static constexpr float  SCALE		= 2.0f;							// width of one cell in world space - SHOULD DIVIDE CHUNK_WIDTH EVENLY [LARGER = BETTER PERFORMANCE & WORSE DETAIL]
 	static constexpr float	DENSITY		= 1.0f / SCALE;					// determines poly density in terrain chunk mesh - inversely proportional to cell scale (> 1 = smaller cells = more polys in mesh)
 	static constexpr int	DIM			= (int)(DENSITY * CHUNK_WIDTH);	// dimension of terrain grid in # quads
 	static constexpr int	VDIM		= DIM + 1;						// dimension of terrain grid in # vertices (celldim + 1)
