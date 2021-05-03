@@ -74,6 +74,7 @@ GLFWwindow* createWindow(unsigned int w, unsigned int h) {
 	glfwMakeContextCurrent(window);											// set focus																				
 	glfwSetFramebufferSizeCallback(window, window_resize_callback);			// bind resize callback
 	glfwSetCursorPosCallback(window, mouse_callback);						// bind mouse motion callback
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	return window;
 }
 
@@ -329,6 +330,7 @@ void keyboard_input(GLFWwindow* window) {		// not technically a "callback", rath
 		printf("FPS: %.1f.\n", FPS);
 		printf("GAME PAUSED! PRESS U to unpause\n");
 		pause = true;
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
 }
 
@@ -343,6 +345,7 @@ void pause_keyboard(GLFWwindow* window) {
 	if (glfwGetKey(window, GLFW_KEY_U) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
 		pause = false;
 		printf("GAME UNPAUSED!\n");
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	}
 }
 
